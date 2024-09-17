@@ -1,6 +1,5 @@
 package com.intellij.support.ide.inspector.settings
 
-import com.intellij.support.ide.inspector.editor.LensSeverityFilter
 import com.intellij.codeInsight.daemon.impl.SeverityRegistrar
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.components.service
@@ -8,23 +7,20 @@ import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
 import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.options.BoundConfigurable
+import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurableWithId
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.util.Disposer
+import com.intellij.support.ide.inspector.editor.LensSeverityFilter
 import com.intellij.ui.DisabledTraversalPolicy
 import com.intellij.ui.EditorTextFieldCellRenderer.SimpleRendererComponent
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.dsl.builder.Cell
-import com.intellij.ui.dsl.builder.RightGap
-import com.intellij.ui.dsl.builder.Row
-import com.intellij.ui.dsl.builder.RowLayout
-import com.intellij.ui.dsl.builder.bindSelected
-import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.builder.*
 import java.awt.Cursor
 
-class LensApplicationConfigurable : BoundConfigurable("Support Buddy"), ConfigurableWithId {
+class LensApplicationConfigurable : BoundConfigurable("IDE Inspector"), ConfigurableWithId, Configurable.Beta {
 	companion object {
-		const val ID = "SupportBuddy"
+		const val ID = "IDEInspector"
 	}
 	
 	private data class DisplayedSeverity(

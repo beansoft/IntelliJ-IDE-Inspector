@@ -11,7 +11,7 @@ import com.intellij.util.xmlb.annotations.XMap
 
 @State(
 	name = LensApplicationConfigurable.ID,
-	storages = [ Storage("chylex.inspectionLens.xml") ],
+	storages = [ Storage("ide.inspector.xml") ],
 	category = SettingsCategory.UI
 )
 class LensSettingsState : SimplePersistentStateComponent<LensSettingsState.State>(State()) {

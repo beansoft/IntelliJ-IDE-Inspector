@@ -1,4 +1,4 @@
-package com.intellij.support.ide.inspector
+package com.intellij.support.ide.editor
 
 import com.intellij.support.ide.inspector.editor.EditorLensInlay
 import com.intellij.lang.annotation.HighlightSeverity

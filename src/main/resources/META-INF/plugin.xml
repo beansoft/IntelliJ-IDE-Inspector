@@ -34,7 +34,7 @@
     <applicationService serviceImplementation="com.intellij.support.ide.inspector.settings.LensSettingsState" />
     <applicationConfigurable id="com.intellij.support.ide.inspector.settings.LensApplicationConfigurable"
                              instance="com.intellij.support.ide.inspector.settings.LensApplicationConfigurable"
-                             displayName="Inspection Lens"
+                             displayName="IDE Inspector"
                              parentId="tools" />
     <editorFactoryMouseListener
             implementation="com.intellij.support.ide.inspector.editor.InspectionEditorMouseListener"/>
