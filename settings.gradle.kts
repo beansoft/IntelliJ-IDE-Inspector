@@ -1,1 +1,1 @@
-rootProject.name = "InspectionLens"
+rootProject.name = "IDE Inspector"

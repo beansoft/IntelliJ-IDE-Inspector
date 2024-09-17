@@ -1,84 +1,51 @@
 <idea-plugin>
-  <id>com.chylex.intellij.inspectionlens</id>
-  <name>Inspection Lens</name>
-  <vendor url="https://chylex.com">chylex</vendor>
+  <id>com.intellij.support.ide.inspector</id>
+  <name>IDE Inspector</name>
+  <vendor url="https://jetbrains.com" email="changjiong.liu@jetbrains.com">JetBrains</vendor>
   
   <description><![CDATA[
-    Displays errors, warnings, and other inspections inline. Highlights the background of lines with inspections. Supports light and dark themes out of the box.
+  WIP.<br>
+    Displays errors, warnings, and other inspections inline with inspection dumps. Highlights the background of lines with inspections. Supports light and dark themes out of the box.
     <br><br>
     By default, the plugin shows <b>Errors</b>, <b>Warnings</b>, <b>Weak Warnings</b>, <b>Server Problems</b>, <b>Grammar Errors</b>, <b>Typos</b>, and other inspections with a high enough severity level. Configure visible severities in <b>Settings | Tools | Inspection Lens</a>.
     <br><br>
-    Inspired by <a href="https://marketplace.visualstudio.com/items?itemName=usernamehw.errorlens">Error Lens</a> for VS Code, and <a href="https://plugins.jetbrains.com/plugin/17302-inlineerror">Inline Error</a> for IntelliJ Platform.
+    Inspired by and <a href="https://plugins.jetbrains.com/plugin/19678-inspection-lens">Inspection Lens</a> for IntelliJ Platform.
   ]]></description>
   
   <change-notes><![CDATA[
-    <b>Version 1.4.1</b>
-    <ul>
-      <li>Fixed warnings in usage of IntelliJ SDK.</li>
-    </ul>
-    <b>Version 1.4</b>
-    <ul>
-      <li>Added configuration of visible severities to <b>Settings | Tools | Inspection Lens</b>.</li>
-    </ul>
-    <b>Version 1.3.3</b>
-    <ul>
-      <li>Partially reverted fix for inspections that include HTML in their description due to breaking inspections with angled brackets.</li>
-      <li>Fixed plugin not working when installed on JetBrains Gateway Client.</li>
-    </ul>
-    <b>Version 1.3.2</b>
-    <ul>
-      <li>Fixed inspections randomly not disappearing.</li>
-    </ul>
-    <b>Version 1.3.1</b>
-    <ul>
-      <li>Updated minimum version to IntelliJ 2023.3 due to breaking API changes.</li>
-    </ul>
-    <b>Version 1.3.0</b>
-    <ul>
-      <li>Added background colors to lines containing inspections. (<a href="https://github.com/chylex/IntelliJ-Inspection-Lens/pull/15">PR #15</a> by <a href="https://github.com/synopss">synopss</a>)</li>
-    </ul>
-    <b>Version 1.2.0</b>
-    <ul>
-      <li>Support for IntelliJ 2023.2 EAP.</li>
-      <li>Added distinct colors for typos and Grazie inspections.</li>
-    </ul>
-    <b>Version 1.1.2</b>
-    <ul>
-      <li>Added plugin icon.</li>
-      <li>Updated minimum version to IntelliJ 2023.1 due to deprecated APIs.</li>
-    </ul>
-    <b>Version 1.1.1</b>
-    <ul>
-      <li>Multiple inspections at the same place in the document are now ordered by severity.</li>
-      <li>Improved performance of processing inspections which do not contain HTML.</li>
-    </ul>
-    <b>Version 1.1.0</b>
-    <ul>
-      <li>Fixed showing inspections that include HTML in their description. (<a href="https://github.com/chylex/IntelliJ-Inspection-Lens/pull/3">PR #3</a> by <a href="https://github.com/KostkaBrukowa">KostkaBrukowa</a>)</li>
-      <li>Fixed exception when asynchronous inspections run on a non-EDT thread.</li>
-    </ul>
     <b>Version 1.0.0</b>
     <ul>
-      <li>Initial version with support for IntelliJ 2022.2 and newer.</li>
+      <li>Initial version with support for IntelliJ 2024.1 and newer.</li>
     </ul>
   ]]></change-notes>
   
   <depends>com.intellij.modules.platform</depends>
-  <depends optional="true" config-file="compatibility/InspectionLens-Grazie.xml">tanvd.grazi</depends>
+  <depends optional="true" config-file="compatibility/IdeInspector-Grazie.xml">tanvd.grazi</depends>
+  <depends optional="true" config-file="plugin_java.xml">com.intellij.java</depends>
+
+  <actions>
+    <action id="IntentionInspectorAction" class="com.intellij.support.ide.inspector.action.IntentionDumpAction"
+            text="Dump Editor Intentions...">
+      <add-to-group group-id="HelpMenu" anchor="first" />
+    </action>
+  </actions>
   
   <extensions defaultExtensionNs="com.intellij">
-    <applicationService serviceImplementation="com.chylex.intellij.inspectionlens.settings.LensSettingsState" />
-    <applicationConfigurable id="com.chylex.intellij.inspectionlens.settings.LensApplicationConfigurable"
-                             instance="com.chylex.intellij.inspectionlens.settings.LensApplicationConfigurable"
+    <applicationService serviceImplementation="com.intellij.support.ide.inspector.settings.LensSettingsState" />
+    <applicationConfigurable id="com.intellij.support.ide.inspector.settings.LensApplicationConfigurable"
+                             instance="com.intellij.support.ide.inspector.settings.LensApplicationConfigurable"
                              displayName="Inspection Lens"
                              parentId="tools" />
+    <editorFactoryMouseListener
+            implementation="com.intellij.support.ide.inspector.editor.InspectionEditorMouseListener"/>
   </extensions>
   
   <applicationListeners>
-    <listener class="com.chylex.intellij.inspectionlens.InspectionLensPluginListener" topic="com.intellij.ide.plugins.DynamicPluginListener" />
+    <listener class="com.intellij.support.ide.inspector.InspectionLensPluginListener" topic="com.intellij.ide.plugins.DynamicPluginListener" />
   </applicationListeners>
   
   <projectListeners>
-    <listener class="com.chylex.intellij.inspectionlens.InspectionLensFileOpenedListener" topic="com.intellij.openapi.fileEditor.FileOpenedSyncListener" />
+    <listener class="com.intellij.support.ide.inspector.InspectionLensFileOpenedListener" topic="com.intellij.openapi.fileEditor.FileOpenedSyncListener" />
   </projectListeners>
+
 </idea-plugin>

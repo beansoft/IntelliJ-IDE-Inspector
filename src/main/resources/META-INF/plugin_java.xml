@@ -1,0 +1,8 @@
+<idea-plugin>
+    <actions>
+        <action id="showGitLogForClasses" class="com.intellij.support.ide.inspector.action.ShowGitLogForClassesAction"
+                text="Show Git Log For Classes...">
+            <add-to-group group-id="HelpMenu" anchor="first" />
+        </action>
+    </actions>
+</idea-plugin>
