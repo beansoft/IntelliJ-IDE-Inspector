@@ -25,9 +25,18 @@
 
   <actions>
     <action id="IntentionInspectorAction" class="com.intellij.support.ide.inspector.action.IntentionDumpAction"
-            text="Dump Editor Intentions...">
+            text="Dump Editor Intentions..." icon="AllIcons.General.InspectionsEye">
+      <add-to-group group-id="HelpMenu" anchor="first" />
+      <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CompareClipboardWithSelection"/>
+      <add-to-group group-id="EditorContextBarMenu" anchor="last" />
+    </action>
+
+    <action id="TestAction" class="com.intellij.support.ide.inspector.action.TestAction"
+            text="Test Kotlin EDT Action..." icon="AllIcons.General.InspectionsEye">
       <add-to-group group-id="HelpMenu" anchor="first" />
     </action>
+
+
   </actions>
   
   <extensions defaultExtensionNs="com.intellij">

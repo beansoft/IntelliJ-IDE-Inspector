@@ -88,7 +88,9 @@ class IntentionDumpAction : AnAction() {
                 result.add(intention)
             }
         }
-//        result.addAll(myGutters)
+
+        result.addAll(myErrorFixes) // Fix no error fix issue
+        result.addAll(intentions.gutters)
         result.addAll(intentions.notifications)
         result = DumbService.getInstance(intentions.project).filterByDumbAwareness(result) as ArrayList<IntentionActionWithTextCaching>
 

@@ -78,6 +78,7 @@ class ShowGitLogForClassesAction : AnAction() {
         @JvmStatic
         private fun showFileAndVcsHistory(project: Project, packageName: String) {
             service<SupportRunService>().coroutineScope.launch {
+                val fileContent = withContext(Dispatchers.IO) {}
                 withContext(Dispatchers.EDT) {
                     packageName?.lines()?.forEach {
                         val file = it
