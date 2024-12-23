@@ -15,3 +15,12 @@ Inspired by [Inspection Lens](https://plugins.jetbrains.com/plugin/17302-inlinee
 > By default, the plugin shows **Errors**, **Warnings**, **Weak Warnings**, **Server Problems**, **Grammar Errors**, **Typos**, and other inspections with a high enough severity level. Configure visible severities in **Settings | Tools | Inspection Lens**.
 
 ![Screenshot](.github/readme/intellij.png)
+
+
+<!-- Plugin description -->
+Displays errors, warnings, and other inspections inline with inspection dumps. Highlights the background of lines with inspections. Supports light and dark themes out of the box.
+<br><br>
+By default, the plugin shows <b>Errors</b>, <b>Warnings</b>, <b>Weak Warnings</b>, <b>Server Problems</b>, <b>Grammar Errors</b>, <b>Typos</b>, and other inspections with a high enough severity level. Configure visible severities in <b>Settings | Tools | Inspection Lens</a>.
+<br><br>
+Inspired by and <a href="https://plugins.jetbrains.com/plugin/19678-inspection-lens">Inspection Lens</a> for IntelliJ Platform.
+<!-- Plugin description end -->
