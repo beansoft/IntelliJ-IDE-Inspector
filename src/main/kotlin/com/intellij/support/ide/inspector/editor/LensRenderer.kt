@@ -3,6 +3,7 @@ package com.intellij.support.ide.inspector.editor
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.codeInsight.daemon.impl.HighlightInfo.IntentionActionDescriptor
 import com.intellij.codeInsight.daemon.impl.HintRenderer
+import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ex.InspectionToolWrapper
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.diagnostic.ReportingClassSubstitutor
@@ -17,7 +18,6 @@ import com.intellij.psi.PsiElement
 import com.jetbrains.support.ide.inspector.IntentionDumpDialog
 import java.awt.Graphics
 import java.awt.Rectangle
-import java.util.ArrayList
 
 /**
  * Renders the text of an inspection lens.
@@ -57,10 +57,13 @@ class LensRenderer(private val info: HighlightInfo) : HintRenderer(null) {
 
 		}
 
-		val quickFixActionRanges = info.quickFixActionRanges
-		if (quickFixActionRanges != null) {
+//		val quickFixActionRanges = info.quickFixActionRanges
+		val quickFixActionRanges: MutableList<Pair<IntentionActionDescriptor, TextRange?>> =
+			collectQuickFixActionRanges()
+
+		if (quickFixActionRanges.isNotEmpty()) {
 			text += " Fixes: " + StringUtil
-				.join<Pair<IntentionActionDescriptor, TextRange?>>(
+				.join(
 				quickFixActionRanges,
 				{ q: Pair<IntentionActionDescriptor, TextRange?> ->
 					// q.first.action.text +
@@ -72,6 +75,7 @@ class LensRenderer(private val info: HighlightInfo) : HintRenderer(null) {
 		severity = LensSeverity.from(info.severity)
 	}
 
+	/// Display inspection info in a dialog
 	fun dumpInspection() {
 		val lines = ArrayList<String>()
 		val classLines = ArrayList<String>()
@@ -104,16 +108,25 @@ class LensRenderer(private val info: HighlightInfo) : HintRenderer(null) {
 			}
 		}
 
-		val quickFixActionRanges = info.quickFixActionRanges
 
-		lines += ""
-		lines += "Fixes:"
+//		val quickFixActionRanges = info.quickFixActionRanges // List<Pair<IntentionActionDescriptor, TextRange>>
+//		val quickFixActionRanges = info.findRegisteredQuickFix { desc, _ -> desc.fixRange }
+		val quickFixActionRanges: MutableList<Pair<IntentionActionDescriptor, TextRange?>> =
+			collectQuickFixActionRanges()
 
-		quickFixActionRanges.forEach {
-			val className = ReportingClassSubstitutor.getClassToReport(it.first.action).name
-			lines += it.first.action.text
-			lines += " class = $className"
-			classLines += className
+		if (quickFixActionRanges.isNotEmpty()) {
+			lines += ""
+			lines += "Fixes:"
+
+			quickFixActionRanges.forEach {
+				val className = ReportingClassSubstitutor.getClassToReport(it.first.action).name
+				if(it.first.action.text.isNotEmpty()) {
+					lines += it.first.action.text
+					lines += " class = $className"
+					classLines += className
+				}
+
+			}
 		}
 
 		IntentionDumpDialog(
@@ -126,7 +139,16 @@ class LensRenderer(private val info: HighlightInfo) : HintRenderer(null) {
 //			.setContents(StringSelection(text), null)
 	}
 
-	
+	private fun collectQuickFixActionRanges(): MutableList<Pair<IntentionActionDescriptor, TextRange?>> {
+		val quickFixActionRanges: MutableList<Pair<IntentionActionDescriptor, TextRange?>> = ArrayList()
+		info.findRegisteredQuickFix<Any> { descriptor: IntentionActionDescriptor, fixRange: TextRange? ->
+			quickFixActionRanges.add(Pair(descriptor, fixRange))
+			null
+		}
+		return quickFixActionRanges
+	}
+
+
 	override fun paint(inlay: Inlay<*>, g: Graphics, r: Rectangle, textAttributes: TextAttributes) {
 		fixBaselineForTextRendering(r)
 		super.paint(inlay, g, r, textAttributes)
