@@ -2,7 +2,7 @@
 
 Quickly find intention/inspection classes in the IDE.
 
-1. Install the plugin in IDEA and open the IDEA source repo(eg:https://github.com/JetBrains/intellij-community) project from disk at https://github.com/beansoft/IntelliJ-IDE-Inspector/releases.
+1. Install the plugin in IDEA from disk at https://github.com/beansoft/IntelliJ-IDE-Inspector/releases and open the IDEA source repo(eg:https://github.com/JetBrains/intellij-community) project.
 2. Install the plugin in the same IDEA or another IDE e.g., WebStorm(does not support Rider)
 3. Open any project and click the inspection result string. Also, on any line in the editor, you can try the `Help | Dump Editor Intentions menu.` to display all intention action's class list.
 4. Copy classes name.
