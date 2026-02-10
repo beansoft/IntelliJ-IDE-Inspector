@@ -24,7 +24,7 @@ class TestAction : AnAction() {
         val lightEditService = LightEditService.getInstance()
         val path = Path.of("sample.java")
         val lightEditorInfo = lightEditService.createNewDocument(path)
-        val myFileEditor = lightEditorInfo.fileEditor
+        val myFileEditor = lightEditorInfo?.fileEditor
         if (myFileEditor is TextEditor) {
             ApplicationManager.getApplication().runWriteAction {
                 myFileEditor.editor.document.setText("public class Main {}")

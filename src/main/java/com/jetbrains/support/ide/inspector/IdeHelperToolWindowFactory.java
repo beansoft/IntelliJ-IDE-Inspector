@@ -1,14 +1,18 @@
 package com.jetbrains.support.ide.inspector;
 
 import com.intellij.DynamicBundle;
+import com.intellij.ide.CopyProvider;
 import com.intellij.ide.IdeBundle;
 import com.intellij.openapi.application.PathManager;
+import com.intellij.openapi.extensions.ExtensionPointName;
 import com.intellij.openapi.extensions.PluginDescriptor;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
+import com.intellij.testIntegration.LanguageTestCreators;
+import com.intellij.testIntegration.TestCreator;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextArea;
 import com.intellij.ui.content.Content;
@@ -29,6 +33,7 @@ public class IdeHelperToolWindowFactory implements ToolWindowFactory, DumbAware 
 
     public static final String TOOL_WINDOW_ID = "IDE Helper";
     public final static String PLUGIN_ID = "com.github.jetbrains.ide.helper";
+    private static final ExtensionPointName<LanguageTestCreators> TEST_CREATOR_EP_NAME = ExtensionPointName.create("com.intellij.testCreator");
 
     public IdeHelperToolWindowFactory() {
 //        String cName = "#" + CodeStyleSettings.class.getName();
@@ -55,6 +60,10 @@ public class IdeHelperToolWindowFactory implements ToolWindowFactory, DumbAware 
         output.append("\n" + PathManager.PROPERTY_PLUGINS_PATH + "=" + FileUtil.toSystemIndependentName(PathManager.getPluginsPath()));
         output.append("\n" + PathManager.PROPERTY_LOG_PATH + "=" + FileUtil.toSystemIndependentName(PathManager.getLogPath()));
         output.append("\nindex_root_path=" + FileUtil.toSystemIndependentName(PathManager.getIndexRoot().toString()));
+        output.append("\nTestCreators");
+        for(LanguageTestCreators provider: TEST_CREATOR_EP_NAME.getExtensionList()) {
+            output.append("\n\tprovider=" +  provider.getClass().getName());
+        }
 
         // final DynamicBundle.LanguageBundleEP languageBundle = DynamicBundle.findLanguageBundle();
         // if (languageBundle != null) {

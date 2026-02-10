@@ -1,5 +1,5 @@
 <idea-plugin>
   <extensions defaultExtensionNs="com.intellij">
-    <postStartupActivity implementation="com.intellij.support.ide.inspector.compatibility.GrazieSupport" />
+<!--    <postStartupActivity implementation="com.intellij.support.ide.inspector.compatibility.GrazieSupport" />-->
   </extensions>
 </idea-plugin>
