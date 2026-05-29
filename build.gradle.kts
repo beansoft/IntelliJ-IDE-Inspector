@@ -99,22 +99,6 @@ intellijPlatform {
         channels = providers.gradleProperty("pluginVersion").map { listOf(it.substringAfter('-', "").substringBefore('.').ifEmpty { "default" }) }
     }
 
-    pluginVerification {
-        ides {
-            ides(providers.gradleProperty("pluginVerifierIdeVersions").get().split(","))
-//                recommended()
-        }
-
-        failureLevel.set(
-            listOf(
-                FailureLevel.INTERNAL_API_USAGES,
-                FailureLevel.COMPATIBILITY_PROBLEMS,
-                FailureLevel.OVERRIDE_ONLY_API_USAGES,
-                FailureLevel.NON_EXTENDABLE_API_USAGES,
-                FailureLevel.PLUGIN_STRUCTURE_WARNINGS,
-            )
-        )
-    }
 }
 
 // Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin

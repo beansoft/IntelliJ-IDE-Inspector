@@ -49,7 +49,7 @@
             implementation="com.intellij.support.ide.inspector.editor.InspectionEditorMouseListener"/>
 
     <toolWindow id="IDE Properties" anchor="bottom" icon="/newui/project.svg" canCloseContents="true"
-                factoryClass="com.jetbrains.support.ide.inspector.IdeHelperToolWindowFactory" secondary="false"/>
+                factoryClass="github.jetbrains.support.ide.inspector.IdeHelperToolWindowFactory" secondary="false"/>
   </extensions>
   
   <applicationListeners>
