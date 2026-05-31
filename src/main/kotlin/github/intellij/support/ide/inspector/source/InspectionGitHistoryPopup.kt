@@ -4,6 +4,7 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ide.DataManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.options.ShowSettingsUtil
@@ -20,6 +21,7 @@ import com.intellij.vcs.log.visible.filters.VcsLogFilterObject
 import com.intellij.vcsUtil.VcsUtil
 import git4idea.GitUtil
 import git4idea.log.showExternalGitLogInToolwindow
+import github.intellij.support.ide.inspector.mcp.IdeaInspectorMcpClient
 import com.intellij.ui.PopupHandler
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -47,8 +49,37 @@ import kotlin.io.path.exists
 object InspectionGitHistoryPopup {
 
     private const val GITHUB_BASE = "https://github.com/JetBrains/intellij-community/commit/"
+    private val LOG = logger<InspectionGitHistoryPopup>()
 
     fun showExternalGitLog(project: Project, fqn: String, anchor: java.awt.Component?) {
+        val settings = service<LensSettingsState>()
+        val mcpUrl = settings.state.mcpServerUrl?.trim().orEmpty()
+        val mcpProjectPath = settings.state.ideSourceRepoPath?.trim().orEmpty()
+        if (settings.state.mcpEnabled && mcpUrl.isNotEmpty() && mcpProjectPath.isNotEmpty()) {
+            object : Task.Backgroundable(project, "Calling remote IDE via MCP…", true) {
+                private var ok = false
+                private var failure: String? = null
+                override fun run(indicator: ProgressIndicator) {
+                    indicator.text = "POST $mcpUrl → show_file_history_for_fqn"
+                    val r = service<IdeaInspectorMcpClient>()
+                        .showFileHistoryForFqn(mcpUrl, fqn, mcpProjectPath)
+                    when (r) {
+                        IdeaInspectorMcpClient.Result.Ok -> ok = true
+                        is IdeaInspectorMcpClient.Result.Failed -> failure = r.reason
+                    }
+                }
+                override fun onSuccess() {
+                    if (ok) return
+                    LOG.info("MCP show_file_history_for_fqn failed, falling back to local: $failure")
+                    showExternalGitLogLocal(project, fqn, anchor)
+                }
+            }.queue()
+            return
+        }
+        showExternalGitLogLocal(project, fqn, anchor)
+    }
+
+    private fun showExternalGitLogLocal(project: Project, fqn: String, anchor: java.awt.Component?) {
         val settings = service<LensSettingsState>()
         val repoPath = settings.state.ideSourceRepoPath?.trim().orEmpty()
         if (repoPath.isEmpty()) {

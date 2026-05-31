@@ -100,6 +100,21 @@ class LensApplicationConfigurable : BoundConfigurable("IDE Inspector"), Configur
 						.align(AlignX.FILL)
 				}
 			}
+			group("Remote IDE (MCP)") {
+				row {
+					checkBox("Delegate Show External Git Log to remote IDE via MCP")
+						.bindSelected(settings::mcpEnabled)
+				}
+				row("Server URL:") {
+					textField()
+						.bindText(
+							{ settings.mcpServerUrl ?: "" },
+							{ settings.mcpServerUrl = it.ifBlank { null } }
+						)
+						.comment("Streamable HTTP endpoint of the remote IntelliJ MCP server (default port 64342, path /stream).")
+						.align(AlignX.FILL)
+				}
+			}
 		}
 	}
 	

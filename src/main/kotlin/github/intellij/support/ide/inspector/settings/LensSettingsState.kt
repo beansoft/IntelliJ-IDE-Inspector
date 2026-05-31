@@ -22,6 +22,9 @@ class LensSettingsState : SimplePersistentStateComponent<LensSettingsState.State
 		var showUnknownSeverities by property(true)
 
 		var ideSourceRepoPath by string("")
+
+		var mcpServerUrl by string("http://127.0.0.1:64342/stream")
+		var mcpEnabled by property(false)
 	}
 	
 	@get:Synchronized
