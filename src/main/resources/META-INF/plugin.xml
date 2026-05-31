@@ -24,6 +24,7 @@
   <depends>Git4Idea</depends>
   <depends optional="true" config-file="compatibility/IdeInspector-Grazie.xml">tanvd.grazi</depends>
   <depends optional="true" config-file="plugin_java.xml">com.intellij.java</depends>
+  <depends optional="true" config-file="plugin_mcp.xml">com.intellij.mcpServer</depends>
 
   <actions>
     <action id="IntentionInspectorAction" class="github.intellij.support.ide.inspector.action.IntentionDumpAction"
