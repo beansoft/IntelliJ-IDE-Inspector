@@ -20,6 +20,7 @@
   ]]></change-notes>
   
   <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.lang</depends>
   <depends optional="true" config-file="compatibility/IdeInspector-Grazie.xml">tanvd.grazi</depends>
   <depends optional="true" config-file="plugin_java.xml">com.intellij.java</depends>
 

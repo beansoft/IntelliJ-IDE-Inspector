@@ -94,6 +94,11 @@ public class IdeHelperToolWindowFactory implements ToolWindowFactory, DumbAware 
                 .createContent(SpecialPathsPanel.create(project), "Special Folders", false);
         specialFolders.setCloseable(false);
         toolWindow.getContentManager().addContent(specialFolders);
+
+        Content inspections = ContentFactory.getInstance()
+                .createContent(InspectionListPanel.create(project), "Inspections", false);
+        inspections.setCloseable(false);
+        toolWindow.getContentManager().addContent(inspections);
     }
 
 
