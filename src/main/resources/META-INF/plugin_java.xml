@@ -4,5 +4,9 @@
                 text="Show Git Log For Classes...">
             <add-to-group group-id="HelpMenu" anchor="first" />
         </action>
+        <action id="showExternalGitLogForClasses" class="github.intellij.support.ide.inspector.action.ShowExternalGitLogAction"
+                text="Show External Git Log For Classes...">
+            <add-to-group group-id="HelpMenu" anchor="after" relative-to-action="showGitLogForClasses" />
+        </action>
     </actions>
 </idea-plugin>

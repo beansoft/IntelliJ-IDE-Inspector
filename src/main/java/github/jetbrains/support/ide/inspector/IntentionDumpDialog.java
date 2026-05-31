@@ -24,6 +24,7 @@ import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.scale.ScaleContext;
 import com.intellij.util.ui.JBFont;
 import com.intellij.util.ui.JBUI;
+import github.intellij.support.ide.inspector.source.InspectionGitHistoryPopup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class IntentionDumpDialog extends DialogWrapper {
+  private final @Nullable Project myProject;
   private final List<String> lines;
   private final List<String> myInfo;
   private final String firstLine;
@@ -44,6 +46,7 @@ public final class IntentionDumpDialog extends DialogWrapper {
                              @NotNull String title, @NotNull String firstLine, @NotNull List<String> lines,
                              @NotNull List<String> copyString ) {
     super(project, false, true);
+    this.myProject = project;
     this.lines = lines;
     this.myInfo = copyString;
     this.firstLine = firstLine;
@@ -82,6 +85,36 @@ public final class IntentionDumpDialog extends DialogWrapper {
     return JBUI.Panels.simplePanel()
       // .addToLeft(icon)
       .addToCenter(box);
+  }
+
+  @Override
+  protected Action @NotNull [] createLeftSideActions() {
+    return new Action[]{ new ShowExternalGitLogAction() };
+  }
+
+  private final class ShowExternalGitLogAction extends AbstractAction {
+    ShowExternalGitLogAction() {
+      super("Show External Git Log");
+      putValue(SHORT_DESCRIPTION, "Open IDEA source git log filtered by the first class name");
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      Project p = myProject;
+      if (p == null) return;
+      String fqn = pickFirstFqn();
+      if (fqn == null) return;
+      InspectionGitHistoryPopup.INSTANCE.showExternalGitLog(p, fqn, getContentPanel());
+    }
+  }
+
+  private @Nullable String pickFirstFqn() {
+    for (String s : myInfo) {
+      if (s == null) continue;
+      String t = s.trim();
+      if (!t.isEmpty() && t.indexOf('.') > 0) return t;
+    }
+    return null;
   }
 
   @Override

@@ -12,6 +12,14 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vcs.changes.ui.ChangesViewContentManager
+import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.vcs.log.VcsLogFileHistoryProvider
+import com.intellij.vcs.log.visible.filters.VcsLogFilterObject
+import com.intellij.vcsUtil.VcsUtil
+import git4idea.GitUtil
+import git4idea.log.showExternalGitLogInToolwindow
 import com.intellij.ui.PopupHandler
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -39,6 +47,76 @@ import kotlin.io.path.exists
 object InspectionGitHistoryPopup {
 
     private const val GITHUB_BASE = "https://github.com/JetBrains/intellij-community/commit/"
+
+    fun showExternalGitLog(project: Project, fqn: String, anchor: java.awt.Component?) {
+        val settings = service<LensSettingsState>()
+        val repoPath = settings.state.ideSourceRepoPath?.trim().orEmpty()
+        if (repoPath.isEmpty()) {
+            promptConfigure(project)
+            return
+        }
+        val repoRoot = Path.of(repoPath)
+        if (!repoRoot.exists()) {
+            JOptionPane.showMessageDialog(anchor, "Configured IDEA source repo does not exist:\n$repoPath",
+                "IDE Inspector", JOptionPane.WARNING_MESSAGE)
+            return
+        }
+        if (!GitUtil.isGitRoot(repoRoot)) {
+            JOptionPane.showMessageDialog(anchor, "Configured IDEA source repo is not a Git root:\n$repoPath",
+                "IDE Inspector", JOptionPane.WARNING_MESSAGE)
+            return
+        }
+        val rootVf = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(repoRoot)
+        if (rootVf == null) {
+            JOptionPane.showMessageDialog(anchor, "Cannot resolve VirtualFile for:\n$repoPath",
+                "IDE Inspector", JOptionPane.WARNING_MESSAGE)
+            return
+        }
+        val toolWindow = ToolWindowManager.getInstance(project)
+            .getToolWindow(ChangesViewContentManager.TOOLWINDOW_ID)
+        if (toolWindow == null) {
+            JOptionPane.showMessageDialog(anchor, "Version Control tool window unavailable.",
+                "IDE Inspector", JOptionPane.WARNING_MESSAGE)
+            return
+        }
+
+        object : Task.Backgroundable(project, "Resolving $fqn…", true) {
+            private var fileVf: VirtualFile? = null
+
+            override fun run(indicator: ProgressIndicator) {
+                indicator.text = "Locating $fqn in source tree…"
+                val resolved = IdeaSourcePathResolver.resolve(repoRoot, fqn) ?: return
+                fileVf = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(resolved)
+            }
+
+            override fun onSuccess() {
+                val vf = fileVf
+                if (vf == null) {
+                    JOptionPane.showMessageDialog(anchor, "Class not found under $repoPath:\n$fqn",
+                        "IDE Inspector", JOptionPane.INFORMATION_MESSAGE)
+                    return
+                }
+                val paths = listOf(VcsUtil.getFilePath(vf))
+                val historyProvider = project.getService(VcsLogFileHistoryProvider::class.java)
+                if (historyProvider != null && historyProvider.canShowFileHistory(paths, null)) {
+                    historyProvider.showFileHistory(paths, null)
+                    return
+                }
+                val roots = listOf(rootVf)
+                val tabTitle = "IDEA History: " + fqn.substringAfterLast('.')
+                val tabDescription = "$fqn\n${vf.path}"
+                val filters = VcsLogFilterObject.collection(
+                    VcsLogFilterObject.fromVirtualFiles(setOf(vf))
+                )
+                val logId = "EXTERNAL " + roots.joinToString(java.io.File.pathSeparator) { it.path }
+                showExternalGitLogInToolwindow(
+                    project, toolWindow,
+                    { createLogUi(logId, filters) },
+                    roots, tabTitle, tabDescription,
+                )
+            }
+        }.queue()
+    }
 
     fun show(project: Project, fqn: String, anchor: java.awt.Component?) {
         val settings = service<LensSettingsState>()

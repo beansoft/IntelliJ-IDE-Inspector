@@ -211,7 +211,7 @@ public final class InspectionListPanel {
         @Override public void actionPerformed(@NotNull AnActionEvent e) {
           Row r = selectedRow();
           if (r == null || r.implClass == null || r.implClass.isEmpty() || "-".equals(r.implClass)) return;
-          InspectionGitHistoryPopup.INSTANCE.show(project, r.implClass, tree);
+          InspectionGitHistoryPopup.INSTANCE.showExternalGitLog(project, r.implClass, tree);
         }
       });
       group.add(new DumbAwareAction("Copy Class Name", "Copy implementation class of selected inspection",
