@@ -1,6 +1,6 @@
 package com.intellij.support.ide.editor
 
-import com.intellij.support.ide.inspector.editor.EditorLensInlay
+import github.intellij.support.ide.inspector.editor.EditorLensInlay
 import com.intellij.lang.annotation.HighlightSeverity
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested

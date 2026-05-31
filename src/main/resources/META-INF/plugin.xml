@@ -25,14 +25,14 @@
   <depends optional="true" config-file="plugin_java.xml">com.intellij.java</depends>
 
   <actions>
-    <action id="IntentionInspectorAction" class="com.intellij.support.ide.inspector.action.IntentionDumpAction"
+    <action id="IntentionInspectorAction" class="github.intellij.support.ide.inspector.action.IntentionDumpAction"
             text="Dump Editor Intentions..." icon="AllIcons.General.InspectionsEye">
       <add-to-group group-id="HelpMenu" anchor="first" />
       <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="CompareClipboardWithSelection"/>
       <add-to-group group-id="EditorContextBarMenu" anchor="last" />
     </action>
 
-    <action id="TestAction" class="com.intellij.support.ide.inspector.action.TestAction"
+    <action id="TestAction" class="github.intellij.support.ide.inspector.action.TestAction"
             text="Test Kotlin EDT Action..." icon="AllIcons.General.InspectionsEye">
       <add-to-group group-id="HelpMenu" anchor="first" />
     </action>
@@ -41,24 +41,24 @@
   </actions>
   
   <extensions defaultExtensionNs="com.intellij">
-    <applicationService serviceImplementation="com.intellij.support.ide.inspector.settings.LensSettingsState" />
-    <applicationConfigurable id="com.intellij.support.ide.inspector.settings.LensApplicationConfigurable"
-                             instance="com.intellij.support.ide.inspector.settings.LensApplicationConfigurable"
+    <applicationService serviceImplementation="github.intellij.support.ide.inspector.settings.LensSettingsState" />
+    <applicationConfigurable id="github.intellij.support.ide.inspector.settings.LensApplicationConfigurable"
+                             instance="github.intellij.support.ide.inspector.settings.LensApplicationConfigurable"
                              displayName="IDE Inspector"
                              parentId="tools" />
     <editorFactoryMouseListener
-            implementation="com.intellij.support.ide.inspector.editor.InspectionEditorMouseListener"/>
+            implementation="github.intellij.support.ide.inspector.editor.InspectionEditorMouseListener"/>
 
     <toolWindow id="IDE Properties" anchor="bottom" icon="/newui/project.svg" canCloseContents="true"
                 factoryClass="github.jetbrains.support.ide.inspector.IdeHelperToolWindowFactory" secondary="false"/>
   </extensions>
   
   <applicationListeners>
-    <listener class="com.intellij.support.ide.inspector.InspectionLensPluginListener" topic="com.intellij.ide.plugins.DynamicPluginListener" />
+    <listener class="github.intellij.support.ide.inspector.InspectionLensPluginListener" topic="com.intellij.ide.plugins.DynamicPluginListener" />
   </applicationListeners>
   
   <projectListeners>
-    <listener class="com.intellij.support.ide.inspector.InspectionLensFileOpenedListener" topic="com.intellij.openapi.fileEditor.FileOpenedSyncListener" />
+    <listener class="github.intellij.support.ide.inspector.InspectionLensFileOpenedListener" topic="com.intellij.openapi.fileEditor.FileOpenedSyncListener" />
   </projectListeners>
 
 </idea-plugin>

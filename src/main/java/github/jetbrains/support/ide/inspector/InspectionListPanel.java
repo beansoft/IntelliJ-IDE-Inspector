@@ -25,6 +25,7 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.tree.TreeUtil;
+import github.intellij.support.ide.inspector.source.InspectionGitHistoryPopup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -199,6 +200,19 @@ public final class InspectionListPanel {
       group.add(new DumbAwareAction("Collapse All", "Collapse every group", com.intellij.icons.AllIcons.Actions.Collapseall) {
         @Override public @NotNull ActionUpdateThread getActionUpdateThread() { return ActionUpdateThread.EDT; }
         @Override public void actionPerformed(@NotNull AnActionEvent e) { TreeUtil.collapseAll(tree, 1); }
+      });
+      group.add(new DumbAwareAction("Show Git History",
+        "Show recent commits for selected inspection class in configured IDEA source repo",
+        com.intellij.icons.AllIcons.Vcs.History) {
+        @Override public @NotNull ActionUpdateThread getActionUpdateThread() { return ActionUpdateThread.EDT; }
+        @Override public void update(@NotNull AnActionEvent e) {
+          e.getPresentation().setEnabled(selectedRow() != null);
+        }
+        @Override public void actionPerformed(@NotNull AnActionEvent e) {
+          Row r = selectedRow();
+          if (r == null || r.implClass == null || r.implClass.isEmpty() || "-".equals(r.implClass)) return;
+          InspectionGitHistoryPopup.INSTANCE.show(project, r.implClass, tree);
+        }
       });
       group.add(new DumbAwareAction("Copy Class Name", "Copy implementation class of selected inspection",
         com.intellij.icons.AllIcons.Actions.Copy) {

@@ -3,6 +3,7 @@ package github.intellij.support.ide.inspector.settings
 import com.intellij.codeInsight.daemon.impl.SeverityRegistrar
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.components.service
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.editor.event.SelectionEvent
 import com.intellij.openapi.editor.event.SelectionListener
 import com.intellij.openapi.editor.markup.TextAttributes
@@ -83,6 +84,20 @@ class LensApplicationConfigurable : BoundConfigurable("IDE Inspector"), Configur
 				
 				row {
 					checkBox("Other").bindSelected(settings::showUnknownSeverities)
+				}
+			}
+			group("IDEA Source Repository") {
+				row("Path:") {
+					textFieldWithBrowseButton(
+						FileChooserDescriptorFactory.createSingleFolderDescriptor()
+							.withTitle("Select IntelliJ Community Source Root")
+					)
+						.bindText(
+							{ settings.ideSourceRepoPath ?: "" },
+							{ settings.ideSourceRepoPath = it.ifBlank { null } }
+						)
+						.comment("Local checkout of intellij-community, used for inspection class git history lookup.")
+						.align(AlignX.FILL)
 				}
 			}
 		}

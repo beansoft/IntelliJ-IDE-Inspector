@@ -18,8 +18,10 @@ class LensSettingsState : SimplePersistentStateComponent<LensSettingsState.State
 	class State : BaseState() {
 		@get:XMap
 		val hiddenSeverities by map<String, github.intellij.support.ide.inspector.settings.StoredSeverity>()
-		
+
 		var showUnknownSeverities by property(true)
+
+		var ideSourceRepoPath by string("")
 	}
 	
 	@get:Synchronized
