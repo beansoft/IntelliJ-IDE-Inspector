@@ -3,9 +3,12 @@ package github.intellij.support.ide.inspector;
 import com.intellij.ide.IdeBundle;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.lang.LanguageExtensionPoint;
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.extensions.ExtensionPointName;
+import github.intellij.support.ide.inspector.keymap.KeymapPanel;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
@@ -17,6 +20,7 @@ import com.intellij.ui.content.ContentFactory;
 import github.intellij.diagnostic.specialPaths.SpecialPathsPanel;
 import org.jetbrains.annotations.NotNull;
 
+import javax.swing.JComponent;
 import java.util.Properties;
 
 /**
@@ -96,6 +100,16 @@ public class IdeHelperToolWindowFactory implements ToolWindowFactory, DumbAware 
                 .createContent(InspectionListPanel.create(project), "Inspections", false);
         inspections.setCloseable(false);
         toolWindow.getContentManager().addContent(inspections);
+
+        KeymapPanel keymapPanel = new KeymapPanel();
+        JComponent keymapComponent = keymapPanel.createComponent();
+        keymapPanel.reset();
+        Content keymap = ContentFactory.getInstance()
+                .createContent(keymapComponent != null ? keymapComponent : keymapPanel, "Keymap", false);
+        keymap.setCloseable(false);
+        Disposable keymapDisposable = keymapPanel::disposeUIResources;
+        Disposer.register(toolWindow.getDisposable(), keymapDisposable);
+        toolWindow.getContentManager().addContent(keymap);
     }
 
 

@@ -24,6 +24,7 @@ import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.OptionsBundle;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.project.DumbAwareAction;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.ui.popup.JBPopupFactory;
 import com.intellij.openapi.ui.popup.ListPopup;
@@ -44,6 +45,7 @@ import com.intellij.util.ui.IoErrorText;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.components.BorderLayoutPanel;
 import com.intellij.util.ui.tree.TreeUtil;
+import github.intellij.support.ide.inspector.source.InspectionGitHistoryPopup;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -258,6 +260,7 @@ public final class KeymapPanel extends JPanel implements SearchableConfigurable,
     group.add(new CopyActionNameAction());
     group.add(new CopyActionClassNameAction());
     group.add(new CopyAllActionInfoAction());
+    group.add(new ShowExternalGitLogForActionClassAction());
 
 
     group = new DefaultActionGroup();
@@ -688,6 +691,28 @@ public final class KeymapPanel extends JPanel implements SearchableConfigurable,
           showHint("Action class name `" + text + "` copied to clipboard.");
         }
       }
+    }
+  }
+
+  private final class ShowExternalGitLogForActionClassAction extends BaseCopyAction {
+    private ShowExternalGitLogForActionClassAction() {
+      super(() -> "Show External Git Log for Action Class",
+            () -> "Show external Git log for the selected action's class",
+            AllIcons.Vcs.History);
+    }
+
+    @Override
+    public void actionPerformed(@NotNull AnActionEvent e) {
+      Project project = e.getProject();
+      if (project == null) return;
+      String actionId = getSelectedActionId();
+      if (StringUtil.isEmpty(actionId)) return;
+      AnAction action = ActionManager.getInstance().getAction(actionId);
+      if (action == null) return;
+      String className = action.getClass().getCanonicalName();
+      if (StringUtil.isEmpty(className)) return;
+      InspectionGitHistoryPopup.INSTANCE.showExternalGitLog(project, className, KeymapPanel.this);
+//      github.intellij.support.ide.inspector.action.ShowExternalGitLogAction.show(project, className);
     }
   }
 
