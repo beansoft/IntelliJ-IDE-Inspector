@@ -35,7 +35,10 @@ The plugin's `<description>` in `plugin.xml` is overwritten at build time from t
 ### Two feature surfaces
 
 1. **Inline inspection lenses** — rendered next to lines with `HighlightInfo`s, clickable to dump the inspection + quick-fix class names.
-2. **Help menu tooling** — `Dump Editor Intentions...` and (when `com.intellij.java` is present) `Show Git Log For Classes...` for jumping straight to inspection sources in an `intellij-community` checkout.
+2. **Help menu tooling** — `Dump Editor Intentions...` and (when `com.intellij.java` is present) `Show Git Log For Classes...` / `ShowExternalGitLogAction` for jumping straight to inspection sources in an `intellij-community` checkout.
+3. **Inspection git history popup** — `InspectionGitHistoryPopup` + `GitHistoryReader` + `IdeaSourcePathResolver` surface commit history for the inspection class against a configured IntelliJ Community checkout (path stored in `.profileconfig.json` / settings). See `docs/inspection-git-history.md` and `docs/external-git-log.md`.
+4. **MCP toolset** — `mcp/IdeaInspectorMcpToolset.kt` + `IdeaInspectorMcpClient.kt` expose IDE inspector actions to the bundled `com.intellij.mcpServer` (optional dep, wired through `plugin_mcp.xml`). Includes git operations and project-path resolution.
+5. **Tool window extras** — `IDE Properties` tool window also hosts the **Special Paths** browser (`diagnostic/specialPaths/*`).
 
 ### Lens pipeline
 
@@ -62,18 +65,30 @@ Wiring runs through these listeners/services (do not reorder without understandi
 
 ### Optional dependencies
 
-`plugin.xml` declares two optional plugin deps with their own config files:
+`plugin.xml` mandatory deps: `com.intellij.modules.platform`, `com.intellij.modules.lang`, **`Git4Idea`** (history popups + external git log need it — plugin will not load without Git4Idea).
+
+Optional plugin deps with their own config files:
 
 - `tanvd.grazi` → `compatibility/IdeInspector-Grazie.xml` (currently empty / commented out).
 - `com.intellij.java` → `plugin_java.xml` (registers `ShowGitLogForClassesAction` only when Java support is loaded — keeps the plugin loadable in WebStorm/etc.).
+- `com.intellij.mcpServer` → `plugin_mcp.xml` (registers `IdeaInspectorMcpToolset` only when the bundled MCP server plugin is present).
 
 ### Package layout quirk
 
-Most code is under `com.intellij.support.ide.inspector.*` (Kotlin). The tool window factory and the intention dump dialog live under `com.jetbrains.support.ide.inspector.*` (Java). Both packages are part of the same plugin — keep this in mind when searching.
+All production code (Kotlin **and** Java) lives under `src/main/java/`, not `src/main/kotlin/` — the `kotlin/` dir exists but is empty. `build.gradle.kts` adds both dirs to `kotlin.srcDirs` via `sourceSets { main { kotlin.srcDirs("src/main/kotlin", "src/main/java") } }` so the Kotlin compiler picks up `.kt` files placed alongside `.java`.
+
+Two top-level packages, both part of the same plugin:
+
+- `github.intellij.support.ide.inspector.*` — lens pipeline, actions, settings, MCP, git history, tool window, intention dump dialog.
+- `github.intellij.diagnostic.specialPaths.*` — `BrowseSpecialPathsDialog` / `SpecialPathsPanel` (paths browser surfaced via the `IDE Properties` tool window).
 
 ### Known gotcha — stale PLUGIN_ID
 
 `InspectionLens.PLUGIN_ID = "com.chylex.intellij.inspectionlens"` does **not** match the real plugin id in `plugin.xml` (`com.intellij.support.ide.inspector`). `InspectionLensPluginListener` gates install/uninstall on `PLUGIN_ID`, so the dynamic-plugin path will not match during plugin reload. The `FileOpenedSyncListener` path still works for normal editor opens. If you change anything in this area, fix the constant.
+
+### Known gotcha — `pluginGroup` ≠ `plugin.xml id`
+
+`gradle.properties pluginGroup = github.intellij.support.ide.inspector` (matches the actual package root) but `plugin.xml <id>` is still `com.intellij.support.ide.inspector`. Marketplace identity follows the xml id, code identity follows the package root. Do not "fix" one to match the other without checking publish history.
 
 ## Tests
 

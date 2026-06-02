@@ -52,15 +52,15 @@
             implementation="github.intellij.support.ide.inspector.editor.InspectionEditorMouseListener"/>
 
     <toolWindow id="IDE Properties" anchor="bottom" icon="/newui/project.svg" canCloseContents="true"
-                factoryClass="github.jetbrains.support.ide.inspector.IdeHelperToolWindowFactory" secondary="false"/>
+                factoryClass="github.intellij.support.ide.inspector.IdeHelperToolWindowFactory" secondary="false"/>
   </extensions>
   
   <applicationListeners>
-    <listener class="github.intellij.support.ide.inspector.InspectionLensPluginListener" topic="com.intellij.ide.plugins.DynamicPluginListener" />
+    <listener class="github.intellij.support.ide.inspector.inspection.InspectionLensPluginListener" topic="com.intellij.ide.plugins.DynamicPluginListener" />
   </applicationListeners>
   
   <projectListeners>
-    <listener class="github.intellij.support.ide.inspector.InspectionLensFileOpenedListener" topic="com.intellij.openapi.fileEditor.FileOpenedSyncListener" />
+    <listener class="github.intellij.support.ide.inspector.inspection.InspectionLensFileOpenedListener" topic="com.intellij.openapi.fileEditor.FileOpenedSyncListener" />
   </projectListeners>
 
 </idea-plugin>
