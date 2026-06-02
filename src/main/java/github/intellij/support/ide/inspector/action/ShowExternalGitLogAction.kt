@@ -14,6 +14,7 @@ import com.intellij.openapi.wm.ToolWindowManager
 import git4idea.GitUtil
 import git4idea.GitVcs
 import git4idea.log.showExternalGitLogInToolwindow
+import github.intellij.support.ide.inspector.IdeInspectorToolWindowFactory
 import github.intellij.support.ide.inspector.inspection.SupportRunService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,7 +76,7 @@ class ShowExternalGitLogAction : AnAction() {
 
         private fun openExternalLog(project: Project, roots: List<VirtualFile>) {
             val toolWindow = ToolWindowManager.getInstance(project)
-                .getToolWindow(ChangesViewContentManager.TOOLWINDOW_ID) ?: return
+                .getToolWindow(IdeInspectorToolWindowFactory.TOOLWINDOW_ID) ?: return
             val title = "Git Log (" + roots.first().name + (if (roots.size > 1) "+" else "") + ")"
             val description = roots.joinToString("\n") { it.path }
             showExternalGitLogInToolwindow(project, toolWindow, roots, title, description)

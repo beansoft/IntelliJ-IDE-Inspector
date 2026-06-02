@@ -51,8 +51,8 @@
     <editorFactoryMouseListener
             implementation="github.intellij.support.ide.inspector.editor.InspectionEditorMouseListener"/>
 
-    <toolWindow id="IDE Properties" anchor="bottom" icon="/newui/project.svg" canCloseContents="true"
-                factoryClass="github.intellij.support.ide.inspector.IdeHelperToolWindowFactory" secondary="false"/>
+    <toolWindow id="IDE Inspector" anchor="bottom" icon="/newui/project.svg" canCloseContents="true"
+                factoryClass="github.intellij.support.ide.inspector.IdeInspectorToolWindowFactory" secondary="false"/>
   </extensions>
   
   <applicationListeners>

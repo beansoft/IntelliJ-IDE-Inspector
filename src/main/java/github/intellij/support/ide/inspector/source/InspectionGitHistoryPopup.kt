@@ -27,6 +27,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
+import github.intellij.support.ide.inspector.IdeInspectorToolWindowFactory
 import github.intellij.support.ide.inspector.settings.LensApplicationConfigurable
 import github.intellij.support.ide.inspector.settings.LensSettingsState
 import java.awt.BorderLayout
@@ -107,7 +108,7 @@ object InspectionGitHistoryPopup {
             return
         }
         val toolWindow = ToolWindowManager.getInstance(project)
-            .getToolWindow(ChangesViewContentManager.TOOLWINDOW_ID)
+            .getToolWindow(IdeInspectorToolWindowFactory.TOOLWINDOW_ID)
         if (toolWindow == null) {
             JOptionPane.showMessageDialog(anchor, "Version Control tool window unavailable.",
                 "IDE Inspector", JOptionPane.WARNING_MESSAGE)
@@ -137,7 +138,7 @@ object InspectionGitHistoryPopup {
                     return
                 }
                 val roots = listOf(rootVf)
-                val tabTitle = "IDEA History: " + fqn.substringAfterLast('.')
+                val tabTitle = "History: " + fqn.substringAfterLast('.')
                 val tabDescription = "$fqn\n${vf.path}"
                 val filters = VcsLogFilterObject.collection(
                     VcsLogFilterObject.fromVirtualFiles(setOf(vf))

@@ -55,6 +55,8 @@ public class ShowGitLogForClassesAction : AnAction() {
 //        val psiFile = e.getData(CommonDataKeys.PSI_FILE)
         val project = e.project ?: return
 
+        // Seed the input dialog with whatever class names the user has on the clipboard,
+        // since this action is typically invoked right after copying them from the lens dump.
         var text = getClipboardText()
         if (text.isEmpty()) text = ""
         //                    ProjectUtil.focusProjectWindow(project, true)
@@ -89,6 +91,18 @@ public class ShowGitLogForClassesAction : AnAction() {
     companion object {
         private fun getCopyPasteManager() = CopyPasteManager.getInstance()
 
+        /**
+         * Resolves each line of [classNames] to a PSI class, navigates to its source file,
+         * and opens VCS file history. Prefers the new VCS Log–based history UI when available,
+         * falls back to the legacy [AbstractVcsHelper.showFileHistory] otherwise.
+         *
+         * Class resolution happens under a read action; navigation and history UI are dispatched
+         * back to the EDT. Runs in [SupportRunService.coroutineScope] so the action returns
+         * immediately.
+         *
+         * @param project current project (must be initialized)
+         * @param classNames newline-separated list of fully qualified class names
+         */
         @JvmStatic
         public fun showFileAndVcsHistory(project: Project, classNames: String) {
             service<SupportRunService>().coroutineScope.launch {
@@ -115,12 +129,15 @@ public class ShowGitLogForClassesAction : AnAction() {
 
                                         if (virtualFile != null) {
                                             if (project.isInitialized) {
+                                                // Open the file in the editor first so the user sees it
+                                                // while VCS history is loading.
                                                 launch(Dispatchers.EDT) {
                                                     navigateTo(virtualFile, project, 0, 0)
                                                 }
 
                                                 val path = VcsUtil.getFilePath(virtualFile)
                                                 val selectedFiles = JBIterable.of<FilePath>(path).toList()
+                                                // Prefer the new VCS Log file history (richer UI, async).
                                                 if(canShowNewFileHistory(project, selectedFiles)) {
                                                     launch(Dispatchers.EDT) {
                                                         showNewFileHistory(project, selectedFiles)
@@ -128,6 +145,8 @@ public class ShowGitLogForClassesAction : AnAction() {
                                                     return@readActionBlocking
                                                 }
 
+                                                // Fallback path: deleted files may have a null VirtualFile,
+                                                // so resolve to the parent dir to still get a VCS root.
                                                 val fileOrParent: VirtualFile =    getExistingFileOrParent(
                                                         path
                                                     )
@@ -158,6 +177,14 @@ public class ShowGitLogForClassesAction : AnAction() {
             }
         }
 
+        /**
+         * Shows a modal multi-line text input dialog backed by a wrapping [JBTextArea].
+         *
+         * @param parent optional dialog owner
+         * @param initValue pre-filled text (e.g. the clipboard contents)
+         * @param title dialog title
+         * @return the entered text on OK, or `null` if the user cancelled
+         */
         @JvmStatic
         fun showMultiLineInputDialog(parent: Component?, initValue: String, title: String?): String? {
             val textArea = JBTextArea()
@@ -184,6 +211,7 @@ public class ShowGitLogForClassesAction : AnAction() {
             }
         }
 
+        /** Returns the current clipboard contents as a string, or empty if no string flavor is available. */
         @JvmStatic
         fun getClipboardText(): String {
             return if (getCopyPasteManager().areDataFlavorsAvailable(DataFlavor.stringFlavor)) {
@@ -194,8 +222,13 @@ public class ShowGitLogForClassesAction : AnAction() {
             }
         }
 
+        /**
+         * Opens [virtualFile] in the editor and moves the caret to ([line], [offset]).
+         * Must be called on the EDT.
+         *
+         * @return `false` if no editor provider can handle the file; `true` otherwise
+         */
         @JvmStatic
-        // can work only on EDT
         fun navigateTo(virtualFile: VirtualFile, project: Project, line: Int?, offset: Int?): Boolean {
             val editorProviderManager = FileEditorProviderManager.getInstance()
             if (editorProviderManager.getProviderList(project, virtualFile).isEmpty()) {
@@ -216,24 +249,34 @@ public class ShowGitLogForClassesAction : AnAction() {
             }
         }
 
+        /**
+         * Returns the [VirtualFile] for [selectedPath] if it still exists on disk,
+         * otherwise falls back to the parent directory (used when the file was deleted in VCS).
+         */
         @JvmStatic
         fun getExistingFileOrParent(selectedPath: FilePath): VirtualFile {
             return ObjectUtils.chooseNotNull(selectedPath.virtualFile, selectedPath.virtualFileParent)
         }
 
 
+        /** Opens the legacy [AbstractVcsHelper] file history toolwindow for [path] under [vcs]. */
         @JvmStatic
         fun showOldFileHistory(project: Project, vcs: AbstractVcs, path: FilePath) {
             val provider = Objects.requireNonNull(vcs.vcsHistoryProvider)
             AbstractVcsHelper.getInstance(project).showFileHistory(provider!!, vcs.annotationProvider, path, vcs)
         }
 
+        /**
+         * Checks whether the new [VcsLogFileHistoryProvider] is registered and accepts [paths].
+         * Used to decide between the new VCS Log history UI and the legacy one.
+         */
         @JvmStatic
         fun canShowNewFileHistory(project: Project, paths: MutableList<FilePath>?): Boolean {
             val historyProvider = project.getService<VcsLogFileHistoryProvider?>(VcsLogFileHistoryProvider::class.java)
             return historyProvider != null && paths != null && historyProvider.canShowFileHistory(paths, null)
         }
 
+        /** Opens the new VCS Log–based file history view for [paths]. Assumes [canShowNewFileHistory] returned true. */
         private fun showNewFileHistory(project: Project, paths: MutableCollection<FilePath>) {
             val historyProvider = project.getService<VcsLogFileHistoryProvider?>(VcsLogFileHistoryProvider::class.java)
             historyProvider.showFileHistory(paths, null)

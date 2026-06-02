@@ -100,6 +100,7 @@ public final class IntentionDumpDialog extends DialogWrapper {
       String fqn = pickFirstFqn();
       if (fqn == null) return;
       InspectionGitHistoryPopup.INSTANCE.showExternalGitLog(p, fqn, getContentPanel());
+      close(OK_EXIT_CODE);
     }
   }
 

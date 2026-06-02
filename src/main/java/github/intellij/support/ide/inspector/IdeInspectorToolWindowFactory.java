@@ -18,7 +18,10 @@ import com.intellij.ui.components.JBTextArea;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
 import github.intellij.diagnostic.specialPaths.SpecialPathsPanel;
+import kotlin.coroutines.Continuation;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import javax.swing.JComponent;
 import java.util.Properties;
@@ -26,18 +29,18 @@ import java.util.Properties;
 /**
  * Main entry for the Tool window.
  */
-public class IdeHelperToolWindowFactory implements ToolWindowFactory, DumbAware {
+public class IdeInspectorToolWindowFactory implements ToolWindowFactory, DumbAware {
 //    private static final Icon FIND_ICON =
 //            ExperimentalUI.isNewUI() ? IconManager.getInstance().getIcon
 //                    ("newui/jsx_13_gray_20x20.svg", RNToolWindowFactory.class)
 //                    : IconManager.getInstance().getIcon
 //                    ("newui/jsx_13_gray.svg", RNToolWindowFactory.class);
 
-    public static final String TOOL_WINDOW_ID = "IDE Helper";
-    public final static String PLUGIN_ID = "com.github.jetbrains.ide.helper";
+    public static final String TOOLWINDOW_ID = "IDE Inspector";
+    public final static String PLUGIN_ID = "github.intellij.support.ide.inspector";
     private static final ExtensionPointName<LanguageExtensionPoint<TestCreator>> TEST_CREATOR_EP_NAME = ExtensionPointName.create("com.intellij.testCreator");
 
-    public IdeHelperToolWindowFactory() {
+    public IdeInspectorToolWindowFactory() {
 //        String cName = "#" + CodeStyleSettings.class.getName();
 //        System.out.println(cName);
 
@@ -92,12 +95,12 @@ public class IdeHelperToolWindowFactory implements ToolWindowFactory, DumbAware 
         System.out.println(output.getText());
 
         Content specialFolders = ContentFactory.getInstance()
-                .createContent(SpecialPathsPanel.create(project), "Special Folders", false);
+                .createContent(SpecialPathsPanel.create(project), "Special Folder", false);
         specialFolders.setCloseable(false);
         toolWindow.getContentManager().addContent(specialFolders);
 
         Content inspections = ContentFactory.getInstance()
-                .createContent(InspectionListPanel.create(project), "Inspections", false);
+                .createContent(InspectionListPanel.create(project), "Inspection", false);
         inspections.setCloseable(false);
         toolWindow.getContentManager().addContent(inspections);
 
@@ -105,16 +108,15 @@ public class IdeHelperToolWindowFactory implements ToolWindowFactory, DumbAware 
         JComponent keymapComponent = keymapPanel.createComponent();
         keymapPanel.reset();
         Content keymap = ContentFactory.getInstance()
-                .createContent(keymapComponent != null ? keymapComponent : keymapPanel, "Keymap", false);
+                .createContent(keymapComponent != null ? keymapComponent : keymapPanel, "Action", false);
         keymap.setCloseable(false);
         Disposable keymapDisposable = keymapPanel::disposeUIResources;
         Disposer.register(toolWindow.getDisposable(), keymapDisposable);
         toolWindow.getContentManager().addContent(keymap);
     }
 
-
-
-    public boolean isApplicable(@NotNull Project project) {
+    @Override
+    public @Nullable Object isApplicableAsync(@NonNull Project project, @NonNull Continuation<? super Boolean> $completion) {
         return true;
     }
 }
