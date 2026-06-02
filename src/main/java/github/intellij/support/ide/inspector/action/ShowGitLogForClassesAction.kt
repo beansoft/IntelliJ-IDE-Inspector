@@ -22,6 +22,8 @@ import com.intellij.psi.PsiFile
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ObjectUtils
+import com.intellij.util.containers.JBIterable
+import com.intellij.vcs.log.VcsLogFileHistoryProvider
 import com.intellij.vcsUtil.VcsUtil
 import github.intellij.support.ide.inspector.inspection.SupportRunService
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +36,19 @@ import javax.swing.JOptionPane
 import javax.swing.JScrollPane
 
 
-class ShowGitLogForClassesAction : AnAction() {
+/**
+ * An action to display the Git log for specified classes.
+ *
+ * This class extends [AnAction] and provides functionality to prompt the user for a list of
+ * class names, then displays the version control system (VCS) history for each provided class.
+ * The VCS history is shown using the project's VCS support. It also handles navigating to the
+ * file in the editor if it exists.
+ *
+ * Please call this action in the IDEA source repo.
+ *
+ * @see AnAction
+ */
+public class ShowGitLogForClassesAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val dataContext = e.dataContext
 //        val editor = dataContext.getData(CommonDataKeys.EDITOR)
@@ -59,13 +73,13 @@ class ShowGitLogForClassesAction : AnAction() {
         //                            }
         //                        })
 
-        val packageName = showMultiLineInputDialog(
+        val classNames = showMultiLineInputDialog(
             null,
             text, "Please Input Multiline class names, eg: a.b.c:"
         )
 
-        if (packageName != null) {
-            showFileAndVcsHistory(project, packageName)
+        if (classNames != null) {
+            showFileAndVcsHistory(project, classNames)
         }
 
     }
@@ -76,11 +90,10 @@ class ShowGitLogForClassesAction : AnAction() {
         private fun getCopyPasteManager() = CopyPasteManager.getInstance()
 
         @JvmStatic
-        private fun showFileAndVcsHistory(project: Project, packageName: String) {
+        public fun showFileAndVcsHistory(project: Project, classNames: String) {
             service<SupportRunService>().coroutineScope.launch {
-                val fileContent = withContext(Dispatchers.IO) {}
                 withContext(Dispatchers.EDT) {
-                    packageName?.lines()?.forEach {
+                    classNames?.lines()?.forEach {
                         val file = it
                         readActionBlocking {
                             //                            val javaPsiFacade = JavaPsiFacade.getInstance(project)
@@ -107,8 +120,15 @@ class ShowGitLogForClassesAction : AnAction() {
                                                 }
 
                                                 val path = VcsUtil.getFilePath(virtualFile)
-                                                val fileOrParent: VirtualFile =
-                                                    getExistingFileOrParent(
+                                                val selectedFiles = JBIterable.of<FilePath>(path).toList()
+                                                if(canShowNewFileHistory(project, selectedFiles)) {
+                                                    launch(Dispatchers.EDT) {
+                                                        showNewFileHistory(project, selectedFiles)
+                                                    }
+                                                    return@readActionBlocking
+                                                }
+
+                                                val fileOrParent: VirtualFile =    getExistingFileOrParent(
                                                         path
                                                     )
 
@@ -201,17 +221,22 @@ class ShowGitLogForClassesAction : AnAction() {
             return ObjectUtils.chooseNotNull(selectedPath.virtualFile, selectedPath.virtualFileParent)
         }
 
-//    private fun showNewFileHistory(project: Project, paths: Collection<FilePath>) {
-//        val historyProvider = project.getService(
-//            VcsLogFileHistoryProvider::class.java
-//        )
-//        historyProvider.showFileHistory(paths, null)
-//    }
 
         @JvmStatic
         fun showOldFileHistory(project: Project, vcs: AbstractVcs, path: FilePath) {
             val provider = Objects.requireNonNull(vcs.vcsHistoryProvider)
             AbstractVcsHelper.getInstance(project).showFileHistory(provider!!, vcs.annotationProvider, path, vcs)
+        }
+
+        @JvmStatic
+        fun canShowNewFileHistory(project: Project, paths: MutableList<FilePath>?): Boolean {
+            val historyProvider = project.getService<VcsLogFileHistoryProvider?>(VcsLogFileHistoryProvider::class.java)
+            return historyProvider != null && paths != null && historyProvider.canShowFileHistory(paths, null)
+        }
+
+        private fun showNewFileHistory(project: Project, paths: MutableCollection<FilePath>) {
+            val historyProvider = project.getService<VcsLogFileHistoryProvider?>(VcsLogFileHistoryProvider::class.java)
+            historyProvider.showFileHistory(paths, null)
         }
     }
 }

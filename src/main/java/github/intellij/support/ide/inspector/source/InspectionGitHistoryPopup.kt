@@ -61,6 +61,7 @@ object InspectionGitHistoryPopup {
                 private var failure: String? = null
                 override fun run(indicator: ProgressIndicator) {
                     indicator.text = "POST $mcpUrl → show_file_history_for_fqn"
+                    println("POST $mcpUrl → show_file_history_for_fqn")
                     val r = service<IdeaInspectorMcpClient>()
                         .showFileHistoryForFqn(mcpUrl, fqn, mcpProjectPath)
                     when (r) {
@@ -71,12 +72,14 @@ object InspectionGitHistoryPopup {
                 override fun onSuccess() {
                     if (ok) return
                     LOG.info("MCP show_file_history_for_fqn failed, falling back to local: $failure")
+                    println("MCP show_file_history_for_fqn failed, falling back to local: $failure")
                     showExternalGitLogLocal(project, fqn, anchor)
                 }
             }.queue()
             return
+        } else {
+            showExternalGitLogLocal(project, fqn, anchor)
         }
-        showExternalGitLogLocal(project, fqn, anchor)
     }
 
     private fun showExternalGitLogLocal(project: Project, fqn: String, anchor: java.awt.Component?) {
@@ -148,6 +151,20 @@ object InspectionGitHistoryPopup {
             }
         }.queue()
     }
+
+    /**
+     * Note: This class is not used so far.
+     * Shows the inspection details for a given fully qualified name (FQN) of a class.
+     *
+     * This function first checks if the IDEA source repository path is configured. If not, it prompts the user to configure it.
+     * If the repository does not exist at the specified path, it shows a warning message.
+     * It then runs a background task to resolve the FQN in the source tree and read the recent git log.
+     * Depending on the result, it either displays the inspection details or an error message.
+     *
+     * @param project The current IntelliJ project.
+     * @param fqn The fully qualified name of the class to inspect.
+     * @param anchor The component to use as the parent for any dialog boxes that may be displayed.
+     */
 
     fun show(project: Project, fqn: String, anchor: java.awt.Component?) {
         val settings = service<LensSettingsState>()

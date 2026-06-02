@@ -12,6 +12,8 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.vcs.log.VcsLogFileHistoryProvider
 import com.intellij.vcsUtil.VcsUtil
+import github.intellij.support.ide.inspector.action.ClassFinderService
+import github.intellij.support.ide.inspector.action.ShowGitLogForClassesAction
 import github.intellij.support.ide.inspector.source.IdeaSourcePathResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -51,6 +53,18 @@ class IdeaInspectorMcpToolset : McpToolset {
         fqn: String,
     ): String {
         val project = currentCoroutineContext().project
+
+        println("show_file_history_for_fqn, project = " + project.projectFilePath)
+
+        val psiFound = readAction {
+            val psiFiles = ClassFinderService.getInstance(project).getPsiFiles(fqn)
+            psiFiles != null && psiFiles.isNotEmpty()
+        }
+        if (psiFound) {
+            ShowGitLogForClassesAction.showFileAndVcsHistory(project, fqn)
+            return "Opened file history via ShowGitLogForClassesAction for $fqn"
+        }
+
         val basePath = project.basePath ?: mcpFail("Project has no base path")
         val repoRoot = Path.of(basePath)
         if (!repoRoot.exists()) mcpFail("Project base path does not exist: $basePath")
