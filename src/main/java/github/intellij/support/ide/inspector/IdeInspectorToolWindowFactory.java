@@ -104,6 +104,16 @@ public class IdeInspectorToolWindowFactory implements ToolWindowFactory, DumbAwa
         inspections.setCloseable(false);
         toolWindow.getContentManager().addContent(inspections);
 
+        Content intentions = ContentFactory.getInstance()
+                .createContent(IntentionListPanel.create(project), "Intention", false);
+        intentions.setCloseable(false);
+        toolWindow.getContentManager().addContent(intentions);
+
+        Content inlays = ContentFactory.getInstance()
+                .createContent(InlayListPanel.create(project), "Inlay", false);
+        inlays.setCloseable(false);
+        toolWindow.getContentManager().addContent(inlays);
+
         KeymapPanel keymapPanel = new KeymapPanel();
         JComponent keymapComponent = keymapPanel.createComponent();
         keymapPanel.reset();
