@@ -3,19 +3,29 @@ package github.intellij.support.ide.inspector;
 import com.intellij.codeInspection.InspectionEP;
 import com.intellij.codeInspection.ex.InspectionProfileImpl;
 import com.intellij.codeInspection.ex.InspectionToolWrapper;
+import com.intellij.lang.Language;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionPlaces;
 import com.intellij.openapi.actionSystem.ActionToolbar;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
+import com.intellij.openapi.actionSystem.Separator;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.extensions.PluginDescriptor;
+import com.intellij.openapi.extensions.PluginId;
+import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.ide.CopyPasteManager;
 import com.intellij.openapi.project.DumbAwareAction;
+import com.intellij.openapi.project.DumbAwareToggleAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.profile.codeInspection.InspectionProfileManager;
 import com.intellij.profile.codeInspection.ProjectInspectionProfileManager;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiManager;
+import com.intellij.ui.ComboboxSpeedSearch;
 import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.JBSplitter;
 import com.intellij.ui.SearchTextField;
@@ -42,13 +52,17 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Readonly inspection tree tab. Lists inspections from the selected profile
- * grouped by category (group path). Shows description for selected leaf.
- * No enable/disable, no settings, no profile mutation.
+ * grouped by category (group path) or by providing plugin. Shows description
+ * for selected leaf. No enable/disable, no settings, no profile mutation.
  */
 public final class InspectionListPanel {
 
@@ -58,13 +72,23 @@ public final class InspectionListPanel {
     return new Panel(project).root;
   }
 
+  static final String LANG_ANY = "(Any language)";
+  static final String LANG_NONE = "(No language)";
+  static final String PLUGIN_ANY = "(Any plugin)";
+  static final String PLUGIN_UNKNOWN = "(Unknown)";
+
+  private enum GroupMode { CATEGORY, PLUGIN, LANGUAGE }
+
   private static final class Row {
     final String shortName;
     final String displayName;
     final String[] groupPath;
     final String severity;
-    final String language;
+    final String languageId;
+    final String languageDisplay;
     final String implClass;
+    final String pluginId;
+    final String pluginName;
     final InspectionToolWrapper<?, ?> wrapper;
 
     Row(InspectionToolWrapper<?, ?> w) {
@@ -81,8 +105,26 @@ public final class InspectionListPanel {
       }
       this.severity = sev;
       String lang = w.getLanguage();
-      this.language = (lang == null || lang.isEmpty()) ? "-" : lang;
+      this.languageId = (lang == null || lang.isEmpty()) ? "" : lang;
+      this.languageDisplay = resolveLanguageDisplay(this.languageId);
       this.implClass = resolveImplClass(w);
+
+      String pid = "";
+      String pname = "";
+      try {
+        InspectionEP ep = w.getExtension();
+        if (ep != null) {
+          PluginDescriptor pd = ep.getPluginDescriptor();
+          if (pd != null) {
+            PluginId id = pd.getPluginId();
+            if (id != null) pid = id.getIdString();
+            String n = pd.getName();
+            if (n != null) pname = n;
+          }
+        }
+      } catch (Throwable ignored) {}
+      this.pluginId = pid;
+      this.pluginName = pname.isEmpty() ? (pid.isEmpty() ? "" : pid) : pname;
     }
 
     String groupPathJoined() {
@@ -91,6 +133,15 @@ public final class InspectionListPanel {
 
     String leafLabel() {
       return displayName.isEmpty() ? shortName : displayName;
+    }
+
+    String pluginBucket() {
+      return pluginName.isEmpty() ? PLUGIN_UNKNOWN : pluginName;
+    }
+
+    String languageBucket() {
+      if (languageId.isEmpty()) return LANG_NONE;
+      return languageDisplay.isEmpty() ? languageId : languageDisplay;
     }
 
     @Override public String toString() { return leafLabel(); }
@@ -108,6 +159,18 @@ public final class InspectionListPanel {
       return "-";
     }
 
+    private static String resolveLanguageDisplay(String langId) {
+      if (langId == null || langId.isEmpty()) return "";
+      try {
+        Language l = Language.findLanguageByID(langId);
+        if (l != null) {
+          String disp = l.getDisplayName();
+          if (disp != null && !disp.isEmpty()) return disp;
+        }
+      } catch (Throwable ignored) {}
+      return langId;
+    }
+
     private static String nullSafe(String s) { return s == null ? "" : s; }
   }
 
@@ -121,10 +184,27 @@ public final class InspectionListPanel {
     @Override public String toString() { return label; }
   }
 
+  /** Combo item: a label plus the underlying language id (empty = any / none sentinel). */
+  private static final class LangItem {
+    final String label;
+    final String languageId; // "" for "any", null for "no language" sentinel
+    LangItem(String label, String languageId) { this.label = label; this.languageId = languageId; }
+    @Override public String toString() { return label; }
+  }
+
+  private static final class PluginItem {
+    final String label;
+    final String pluginName; // "" = any, null = unknown sentinel
+    PluginItem(String label, String pluginName) { this.label = label; this.pluginName = pluginName; }
+    @Override public String toString() { return label; }
+  }
+
   private static final class Panel {
     final JComponent root;
     private final Project project;
     private final ComboBox<ProfileItem> profileCombo = new ComboBox<>();
+    private final ComboBox<LangItem> languageCombo = new ComboBox<>();
+    private final ComboBox<PluginItem> pluginCombo = new ComboBox<>();
     private final SearchTextField filterField = new SearchTextField();
     private final DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("Inspections");
     private final DefaultTreeModel treeModel = new DefaultTreeModel(rootNode);
@@ -133,6 +213,9 @@ public final class InspectionListPanel {
     private final JBLabel status = new JBLabel("");
     private volatile long loadToken = 0;
     private List<Row> allRows = new ArrayList<>();
+    private GroupMode groupMode = GroupMode.CATEGORY;
+    private boolean limitToCurrentFile = false;
+    private boolean suppressFilterEvents = false;
 
     Panel(@NotNull Project p) {
       this.project = p;
@@ -154,20 +237,43 @@ public final class InspectionListPanel {
       JPanel top = new JPanel(new BorderLayout(8, 0));
       top.setBorder(JBUI.Borders.empty(4, 6));
 
-      JPanel left = new JPanel();
-      left.setLayout(new BoxLayout(left, BoxLayout.X_AXIS));
-      left.add(new JBLabel("Profile:"));
-      left.add(Box.createHorizontalStrut(6));
-      left.add(profileCombo);
-      left.add(Box.createHorizontalStrut(12));
-      left.add(new JBLabel("Filter:"));
-      left.add(Box.createHorizontalStrut(6));
+      // Row 1: profile + filter text + status
+      JPanel row1 = new JPanel();
+      row1.setLayout(new BoxLayout(row1, BoxLayout.X_AXIS));
+      row1.add(new JBLabel("Profile:"));
+      row1.add(Box.createHorizontalStrut(6));
+      row1.add(profileCombo);
+      row1.add(Box.createHorizontalStrut(12));
+      row1.add(new JBLabel("Filter:"));
+      row1.add(Box.createHorizontalStrut(6));
       filterField.setPreferredSize(new Dimension(220, filterField.getPreferredSize().height));
-      left.add(filterField);
-      left.add(Box.createHorizontalStrut(12));
-      left.add(status);
+      row1.add(filterField);
+      row1.add(Box.createHorizontalStrut(12));
+      row1.add(status);
 
-      top.add(left, BorderLayout.WEST);
+      // Row 2: language + plugin combos
+      JPanel row2 = new JPanel();
+      row2.setLayout(new BoxLayout(row2, BoxLayout.X_AXIS));
+      row2.setBorder(JBUI.Borders.emptyTop(4));
+      row2.add(new JBLabel("Language:"));
+      row2.add(Box.createHorizontalStrut(6));
+      languageCombo.setPreferredSize(new Dimension(180, languageCombo.getPreferredSize().height));
+      ComboboxSpeedSearch.installOn(languageCombo);
+      row2.add(languageCombo);
+      row2.add(Box.createHorizontalStrut(12));
+      row2.add(new JBLabel("Plugin:"));
+      row2.add(Box.createHorizontalStrut(6));
+      pluginCombo.setPreferredSize(new Dimension(240, pluginCombo.getPreferredSize().height));
+      ComboboxSpeedSearch.installOn(pluginCombo);
+      row2.add(pluginCombo);
+      row2.add(Box.createHorizontalGlue());
+
+      JPanel west = new JPanel();
+      west.setLayout(new BoxLayout(west, BoxLayout.Y_AXIS));
+      west.add(row1);
+      west.add(row2);
+
+      top.add(west, BorderLayout.WEST);
       top.add(buildToolbar(top), BorderLayout.EAST);
 
       JPanel main = new JPanel(new BorderLayout());
@@ -179,6 +285,8 @@ public final class InspectionListPanel {
       filterField.addDocumentListener(new DocumentAdapter() {
         @Override protected void textChanged(@NotNull DocumentEvent e) { rebuildTree(); }
       });
+      languageCombo.addActionListener(e -> { if (!suppressFilterEvents) rebuildTree(); });
+      pluginCombo.addActionListener(e -> { if (!suppressFilterEvents) rebuildTree(); });
 
       populateProfiles();
       reloadFromCombo();
@@ -201,6 +309,54 @@ public final class InspectionListPanel {
         @Override public @NotNull ActionUpdateThread getActionUpdateThread() { return ActionUpdateThread.EDT; }
         @Override public void actionPerformed(@NotNull AnActionEvent e) { TreeUtil.collapseAll(tree, 1); }
       });
+      group.add(new Separator());
+      group.add(new DumbAwareToggleAction("Group by Category",
+        "Group inspections by their category path",
+        com.intellij.icons.AllIcons.Actions.GroupBy) {
+        @Override public @NotNull ActionUpdateThread getActionUpdateThread() { return ActionUpdateThread.EDT; }
+        @Override public boolean isSelected(@NotNull AnActionEvent e) { return groupMode == GroupMode.CATEGORY; }
+        @Override public void setSelected(@NotNull AnActionEvent e, boolean state) {
+          if (state && groupMode != GroupMode.CATEGORY) {
+            groupMode = GroupMode.CATEGORY;
+            rebuildTree();
+          }
+        }
+      });
+      group.add(new DumbAwareToggleAction("Group by Plugin",
+        "Group inspections by providing plugin",
+        com.intellij.icons.AllIcons.Actions.GroupByModule) {
+        @Override public @NotNull ActionUpdateThread getActionUpdateThread() { return ActionUpdateThread.EDT; }
+        @Override public boolean isSelected(@NotNull AnActionEvent e) { return groupMode == GroupMode.PLUGIN; }
+        @Override public void setSelected(@NotNull AnActionEvent e, boolean state) {
+          if (state && groupMode != GroupMode.PLUGIN) {
+            groupMode = GroupMode.PLUGIN;
+            rebuildTree();
+          }
+        }
+      });
+      group.add(new DumbAwareToggleAction("Group by Language",
+        "Group inspections by target language",
+        com.intellij.icons.AllIcons.Actions.GroupByFile) {
+        @Override public @NotNull ActionUpdateThread getActionUpdateThread() { return ActionUpdateThread.EDT; }
+        @Override public boolean isSelected(@NotNull AnActionEvent e) { return groupMode == GroupMode.LANGUAGE; }
+        @Override public void setSelected(@NotNull AnActionEvent e, boolean state) {
+          if (state && groupMode != GroupMode.LANGUAGE) {
+            groupMode = GroupMode.LANGUAGE;
+            rebuildTree();
+          }
+        }
+      });
+      group.add(new DumbAwareToggleAction("Limit to Current File",
+        "Show only inspections applicable to the language of the currently open editor file",
+        com.intellij.icons.AllIcons.Actions.PreviewDetails) {
+        @Override public @NotNull ActionUpdateThread getActionUpdateThread() { return ActionUpdateThread.EDT; }
+        @Override public boolean isSelected(@NotNull AnActionEvent e) { return limitToCurrentFile; }
+        @Override public void setSelected(@NotNull AnActionEvent e, boolean state) {
+          limitToCurrentFile = state;
+          rebuildTree();
+        }
+      });
+      group.add(new Separator());
       group.add(new DumbAwareAction("Show Git History",
         "Show recent commits for selected inspection class in configured IDEA source repo",
         com.intellij.icons.AllIcons.Vcs.History) {
@@ -263,6 +419,7 @@ public final class InspectionListPanel {
       ProfileItem sel = (ProfileItem) profileCombo.getSelectedItem();
       if (sel == null) {
         allRows = new ArrayList<>();
+        rebuildFilterCombos();
         rebuildTree();
         return;
       }
@@ -292,6 +449,7 @@ public final class InspectionListPanel {
         ApplicationManager.getApplication().invokeLater(() -> {
           if (token != loadToken) return;
           allRows = rows;
+          rebuildFilterCombos();
           rebuildTree();
           status.setText(rows.size() + " inspections");
           description.setText("");
@@ -299,15 +457,89 @@ public final class InspectionListPanel {
       });
     }
 
+    private void rebuildFilterCombos() {
+      suppressFilterEvents = true;
+      try {
+        // Language combo
+        Object prevLang = languageCombo.getSelectedItem();
+        TreeMap<String, String> langs = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        boolean hasEmpty = false;
+        for (Row r : allRows) {
+          if (r.languageId.isEmpty()) { hasEmpty = true; continue; }
+          langs.putIfAbsent(r.languageDisplay, r.languageId);
+        }
+        DefaultComboBoxModel<LangItem> langModel = new DefaultComboBoxModel<>();
+        langModel.addElement(new LangItem(LANG_ANY, ""));
+        if (hasEmpty) langModel.addElement(new LangItem(LANG_NONE, null));
+        for (Map.Entry<String, String> e : langs.entrySet()) {
+          langModel.addElement(new LangItem(e.getKey(), e.getValue()));
+        }
+        languageCombo.setModel(langModel);
+        if (prevLang instanceof LangItem pl) {
+          for (int i = 0; i < langModel.getSize(); i++) {
+            LangItem it = langModel.getElementAt(i);
+            if (java.util.Objects.equals(it.languageId, pl.languageId)) {
+              languageCombo.setSelectedIndex(i);
+              break;
+            }
+          }
+        }
+
+        // Plugin combo
+        Object prevPlugin = pluginCombo.getSelectedItem();
+        TreeMap<String, String> plugins = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        boolean hasUnknown = false;
+        for (Row r : allRows) {
+          if (r.pluginName.isEmpty()) { hasUnknown = true; continue; }
+          plugins.putIfAbsent(r.pluginName, r.pluginName);
+        }
+        DefaultComboBoxModel<PluginItem> pluginModel = new DefaultComboBoxModel<>();
+        pluginModel.addElement(new PluginItem(PLUGIN_ANY, ""));
+        if (hasUnknown) pluginModel.addElement(new PluginItem(PLUGIN_UNKNOWN, null));
+        for (String pn : plugins.keySet()) {
+          pluginModel.addElement(new PluginItem(pn, pn));
+        }
+        pluginCombo.setModel(pluginModel);
+        if (prevPlugin instanceof PluginItem pp) {
+          for (int i = 0; i < pluginModel.getSize(); i++) {
+            PluginItem it = pluginModel.getElementAt(i);
+            if (java.util.Objects.equals(it.pluginName, pp.pluginName)) {
+              pluginCombo.setSelectedIndex(i);
+              break;
+            }
+          }
+        }
+      } finally {
+        suppressFilterEvents = false;
+      }
+    }
+
     private void rebuildTree() {
-      String q = filterField.getText().trim().toLowerCase();
+      String q = filterField.getText().trim().toLowerCase(Locale.ROOT);
+      LangItem langSel = (LangItem) languageCombo.getSelectedItem();
+      PluginItem pluginSel = (PluginItem) pluginCombo.getSelectedItem();
+      Set<String> currentFileLangs = limitToCurrentFile ? currentFileLanguageIds() : null;
+
       rootNode.removeAllChildren();
 
       Map<String, DefaultMutableTreeNode> groupCache = new HashMap<>();
       int leafCount = 0;
       for (Row r : allRows) {
-        if (!matches(r, q)) continue;
-        DefaultMutableTreeNode parent = getOrCreateGroupNode(groupCache, r.groupPath);
+        if (!matches(r, q, langSel, pluginSel, currentFileLangs)) continue;
+        DefaultMutableTreeNode parent;
+        switch (groupMode) {
+          case PLUGIN -> parent = groupCache.computeIfAbsent(r.pluginBucket(), key -> {
+            DefaultMutableTreeNode n = new DefaultMutableTreeNode(new GroupNode(key));
+            rootNode.add(n);
+            return n;
+          });
+          case LANGUAGE -> parent = groupCache.computeIfAbsent(r.languageBucket(), key -> {
+            DefaultMutableTreeNode n = new DefaultMutableTreeNode(new GroupNode(key));
+            rootNode.add(n);
+            return n;
+          });
+          default -> parent = getOrCreateGroupNode(groupCache, r.groupPath);
+        }
         parent.add(new DefaultMutableTreeNode(r));
         leafCount++;
       }
@@ -320,16 +552,33 @@ public final class InspectionListPanel {
         TreeUtil.expand(tree, 1);
       }
 
+      String filterNote = filterNote(langSel, pluginSel, currentFileLangs);
       if (!allRows.isEmpty()) {
-        status.setText(leafCount + " / " + allRows.size() + " inspections");
+        status.setText(leafCount + " / " + allRows.size() + " inspections" + filterNote);
+      } else {
+        status.setText("0 inspections" + filterNote);
       }
+    }
+
+    private String filterNote(LangItem lang, PluginItem plugin, Set<String> currentFileLangs) {
+      List<String> parts = new ArrayList<>();
+      if (lang != null && !(lang.languageId != null && lang.languageId.isEmpty())) {
+        parts.add(lang.languageId == null ? "no lang" : "lang=" + lang.label);
+      }
+      if (plugin != null && !(plugin.pluginName != null && plugin.pluginName.isEmpty())) {
+        parts.add(plugin.pluginName == null ? "unknown plugin" : "plugin=" + plugin.pluginName);
+      }
+      if (currentFileLangs != null) {
+        parts.add("current-file" + (currentFileLangs.isEmpty() ? "(none)" : ""));
+      }
+      return parts.isEmpty() ? "" : "  [" + String.join(", ", parts) + "]";
     }
 
     private DefaultMutableTreeNode getOrCreateGroupNode(Map<String, DefaultMutableTreeNode> cache, String[] path) {
       StringBuilder key = new StringBuilder();
       DefaultMutableTreeNode parent = rootNode;
       for (String segment : path) {
-        if (key.length() > 0) key.append(' ');
+        if (key.length() > 0) key.append(' ');
         key.append(segment);
         String k = key.toString();
         DefaultMutableTreeNode node = cache.get(k);
@@ -343,13 +592,66 @@ public final class InspectionListPanel {
       return parent;
     }
 
-    private static boolean matches(Row r, String needle) {
-      if (needle.isEmpty()) return true;
-      if (r.shortName.toLowerCase().contains(needle)) return true;
-      if (r.displayName.toLowerCase().contains(needle)) return true;
-      if (r.implClass.toLowerCase().contains(needle)) return true;
-      if (r.groupPathJoined().toLowerCase().contains(needle)) return true;
-      return false;
+    private boolean matches(Row r, String needle, LangItem lang, PluginItem plugin, Set<String> currentFileLangs) {
+      if (!needle.isEmpty()) {
+        boolean textOk = r.shortName.toLowerCase(Locale.ROOT).contains(needle)
+          || r.displayName.toLowerCase(Locale.ROOT).contains(needle)
+          || r.implClass.toLowerCase(Locale.ROOT).contains(needle)
+          || r.groupPathJoined().toLowerCase(Locale.ROOT).contains(needle)
+          || r.pluginName.toLowerCase(Locale.ROOT).contains(needle)
+          || r.languageDisplay.toLowerCase(Locale.ROOT).contains(needle);
+        if (!textOk) return false;
+      }
+      if (lang != null) {
+        if (lang.languageId == null) { // "(No language)"
+          if (!r.languageId.isEmpty()) return false;
+        } else if (!lang.languageId.isEmpty()) {
+          if (!lang.languageId.equalsIgnoreCase(r.languageId)) return false;
+        }
+      }
+      if (plugin != null) {
+        if (plugin.pluginName == null) { // "(Unknown)"
+          if (!r.pluginName.isEmpty()) return false;
+        } else if (!plugin.pluginName.isEmpty()) {
+          if (!plugin.pluginName.equalsIgnoreCase(r.pluginName)) return false;
+        }
+      }
+      if (currentFileLangs != null) {
+        // empty languageId = applies to all languages → include
+        if (!r.languageId.isEmpty() && !currentFileLangs.contains(r.languageId)) return false;
+      }
+      return true;
+    }
+
+    private Set<String> currentFileLanguageIds() {
+      Set<String> result = new HashSet<>();
+      try {
+        FileEditorManager fem = FileEditorManager.getInstance(project);
+        VirtualFile[] files = fem.getSelectedFiles();
+        if (files.length == 0) return result;
+        VirtualFile vf = files[0];
+        PsiFile psi = PsiManager.getInstance(project).findFile(vf);
+        Language base;
+        if (psi != null) {
+          base = psi.getLanguage();
+        } else {
+          // fallback via file type
+          base = null;
+          try {
+            var ft = vf.getFileType();
+            if (ft instanceof com.intellij.openapi.fileTypes.LanguageFileType lft) {
+              base = lft.getLanguage();
+            }
+          } catch (Throwable ignored) {}
+        }
+        while (base != null) {
+          result.add(base.getID());
+          Language next = base.getBaseLanguage();
+          if (next == base) break;
+          base = next;
+        }
+      } catch (Throwable ignored) {}
+      return result;
     }
 
     private @Nullable Row selectedRow() {
@@ -377,7 +679,16 @@ public final class InspectionListPanel {
       header.append("<p><b>Short name:</b> ").append(escape(r.shortName)).append("<br>");
       header.append("<b>Group:</b> ").append(escape(r.groupPathJoined())).append("<br>");
       header.append("<b>Severity:</b> ").append(escape(r.severity)).append("<br>");
-      header.append("<b>Language:</b> ").append(escape(r.language)).append("<br>");
+      header.append("<b>Language:</b> ").append(escape(r.languageDisplay.isEmpty() ? "-" : r.languageDisplay));
+      if (!r.languageId.isEmpty() && !r.languageId.equalsIgnoreCase(r.languageDisplay)) {
+        header.append(" (").append(escape(r.languageId)).append(")");
+      }
+      header.append("<br>");
+      header.append("<b>Plugin:</b> ").append(escape(r.pluginName.isEmpty() ? PLUGIN_UNKNOWN : r.pluginName));
+      if (!r.pluginId.isEmpty() && !r.pluginId.equalsIgnoreCase(r.pluginName)) {
+        header.append(" (").append(escape(r.pluginId)).append(")");
+      }
+      header.append("<br>");
       header.append("<b>Impl class:</b> ").append(escape(r.implClass)).append("</p><hr>");
       header.append(html).append("</body></html>");
       description.setText(header.toString());
