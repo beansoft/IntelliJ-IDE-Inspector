@@ -71,6 +71,7 @@ public final class KeymapPanel extends JPanel implements SearchableConfigurable,
   private final KeymapSchemeManager myManager = myKeymapSelector.getManager();
   private final ActionsTree myActionsTree = new ActionsTree();
   private FilterComponent myFilterComponent;
+  private SearchTextField myClassFilterField;
   private TreeExpansionMonitor myTreeExpansionMonitor;
   private final @NotNull ShortcutFilteringPanel myFilteringPanel = new ShortcutFilteringPanel();
 
@@ -297,10 +298,40 @@ public final class KeymapPanel extends JPanel implements SearchableConfigurable,
 
     group.add(new ClearFilteringAction());
 
+    myClassFilterField = new SearchTextField();
+    myClassFilterField.getTextEditor().getEmptyText().setText("Filter by class name");
+    myClassFilterField.addDocumentListener(new com.intellij.ui.DocumentAdapter() {
+      @Override
+      protected void textChanged(@NotNull javax.swing.event.DocumentEvent e) {
+        applyClassFilter();
+      }
+    });
+
+    JPanel filterRow = new BorderLayoutPanel().addToCenter(myFilterComponent).addToRight(searchToolbar);
+    JPanel classRow = new BorderLayoutPanel().addToLeft(new com.intellij.ui.components.JBLabel("Class: ")).addToCenter(myClassFilterField);
+
+    JPanel filtersStack = new JPanel(new GridLayout(2, 1, 0, 2));
+    filtersStack.add(filterRow);
+    filtersStack.add(classRow);
+
     JPanel panel = new JPanel(new GridLayout(1, 2));
     panel.add(toolbar.getComponent());
-    panel.add(new BorderLayoutPanel().addToCenter(myFilterComponent).addToRight(searchToolbar));
+    panel.add(filtersStack);
     return panel;
+  }
+
+  private void applyClassFilter() {
+    String cls = myClassFilterField == null ? "" : myClassFilterField.getText().trim().toLowerCase();
+    if (cls.isEmpty()) {
+      myActionsTree.setBaseFilter(null);
+    } else {
+      myActionsTree.setBaseFilter(action -> {
+        if (action == null) return false;
+        return action.getClass().getName().toLowerCase().contains(cls);
+      });
+    }
+    myActionsTree.filter(myFilterComponent == null ? null : myFilterComponent.getFilter(), myQuickLists);
+    TreeUtil.expandAll(myActionsTree.getTree());
   }
 
   public static @NotNull TreeExpander createTreeExpander(@NotNull ActionsTree actionsTree) {

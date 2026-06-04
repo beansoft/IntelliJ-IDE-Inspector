@@ -206,6 +206,7 @@ public final class InspectionListPanel {
     private final ComboBox<LangItem> languageCombo = new ComboBox<>();
     private final ComboBox<PluginItem> pluginCombo = new ComboBox<>();
     private final SearchTextField filterField = new SearchTextField();
+    private final SearchTextField classFilterField = new SearchTextField();
     private final DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("Inspections");
     private final DefaultTreeModel treeModel = new DefaultTreeModel(rootNode);
     private final Tree tree = new Tree(treeModel);
@@ -249,6 +250,12 @@ public final class InspectionListPanel {
       filterField.setPreferredSize(new Dimension(220, filterField.getPreferredSize().height));
       row1.add(filterField);
       row1.add(Box.createHorizontalStrut(12));
+      row1.add(new JBLabel("Class:"));
+      row1.add(Box.createHorizontalStrut(6));
+      classFilterField.setPreferredSize(new Dimension(220, classFilterField.getPreferredSize().height));
+      classFilterField.getTextEditor().getEmptyText().setText("Filter by class name");
+      row1.add(classFilterField);
+      row1.add(Box.createHorizontalStrut(12));
       row1.add(status);
 
       // Row 2: language + plugin combos
@@ -283,6 +290,9 @@ public final class InspectionListPanel {
 
       profileCombo.addActionListener(e -> reloadFromCombo());
       filterField.addDocumentListener(new DocumentAdapter() {
+        @Override protected void textChanged(@NotNull DocumentEvent e) { rebuildTree(); }
+      });
+      classFilterField.addDocumentListener(new DocumentAdapter() {
         @Override protected void textChanged(@NotNull DocumentEvent e) { rebuildTree(); }
       });
       languageCombo.addActionListener(e -> { if (!suppressFilterEvents) rebuildTree(); });
@@ -516,6 +526,7 @@ public final class InspectionListPanel {
 
     private void rebuildTree() {
       String q = filterField.getText().trim().toLowerCase(Locale.ROOT);
+      String classQ = classFilterField.getText().trim().toLowerCase(Locale.ROOT);
       LangItem langSel = (LangItem) languageCombo.getSelectedItem();
       PluginItem pluginSel = (PluginItem) pluginCombo.getSelectedItem();
       Set<String> currentFileLangs = limitToCurrentFile ? currentFileLanguageIds() : null;
@@ -525,7 +536,7 @@ public final class InspectionListPanel {
       Map<String, DefaultMutableTreeNode> groupCache = new HashMap<>();
       int leafCount = 0;
       for (Row r : allRows) {
-        if (!matches(r, q, langSel, pluginSel, currentFileLangs)) continue;
+        if (!matches(r, q, classQ, langSel, pluginSel, currentFileLangs)) continue;
         DefaultMutableTreeNode parent;
         switch (groupMode) {
           case PLUGIN -> parent = groupCache.computeIfAbsent(r.pluginBucket(), key -> {
@@ -592,7 +603,7 @@ public final class InspectionListPanel {
       return parent;
     }
 
-    private boolean matches(Row r, String needle, LangItem lang, PluginItem plugin, Set<String> currentFileLangs) {
+    private boolean matches(Row r, String needle, String classNeedle, LangItem lang, PluginItem plugin, Set<String> currentFileLangs) {
       if (!needle.isEmpty()) {
         boolean textOk = r.shortName.toLowerCase(Locale.ROOT).contains(needle)
           || r.displayName.toLowerCase(Locale.ROOT).contains(needle)
@@ -601,6 +612,9 @@ public final class InspectionListPanel {
           || r.pluginName.toLowerCase(Locale.ROOT).contains(needle)
           || r.languageDisplay.toLowerCase(Locale.ROOT).contains(needle);
         if (!textOk) return false;
+      }
+      if (!classNeedle.isEmpty()) {
+        if (!r.implClass.toLowerCase(Locale.ROOT).contains(classNeedle)) return false;
       }
       if (lang != null) {
         if (lang.languageId == null) { // "(No language)"

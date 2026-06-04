@@ -126,6 +126,7 @@ public final class IntentionListPanel {
     private final Project project;
     private final ComboBox<PluginItem> pluginCombo = new ComboBox<>();
     private final SearchTextField filterField = new SearchTextField();
+    private final SearchTextField classFilterField = new SearchTextField();
     private final DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("Intentions");
     private final DefaultTreeModel treeModel = new DefaultTreeModel(rootNode);
     private final Tree tree = new Tree(treeModel);
@@ -163,6 +164,12 @@ public final class IntentionListPanel {
       filterField.setPreferredSize(new Dimension(220, filterField.getPreferredSize().height));
       row1.add(filterField);
       row1.add(Box.createHorizontalStrut(12));
+      row1.add(new JBLabel("Class:"));
+      row1.add(Box.createHorizontalStrut(6));
+      classFilterField.setPreferredSize(new Dimension(220, classFilterField.getPreferredSize().height));
+      classFilterField.getTextEditor().getEmptyText().setText("Filter by class name");
+      row1.add(classFilterField);
+      row1.add(Box.createHorizontalStrut(12));
       row1.add(status);
 
       JPanel row2 = new JPanel();
@@ -189,6 +196,9 @@ public final class IntentionListPanel {
       this.root = main;
 
       filterField.addDocumentListener(new DocumentAdapter() {
+        @Override protected void textChanged(@NotNull DocumentEvent e) { rebuildTree(); }
+      });
+      classFilterField.addDocumentListener(new DocumentAdapter() {
         @Override protected void textChanged(@NotNull DocumentEvent e) { rebuildTree(); }
       });
       pluginCombo.addActionListener(e -> { if (!suppressFilterEvents) rebuildTree(); });
@@ -323,13 +333,14 @@ public final class IntentionListPanel {
 
     private void rebuildTree() {
       String q = filterField.getText().trim().toLowerCase(Locale.ROOT);
+      String classQ = classFilterField.getText().trim().toLowerCase(Locale.ROOT);
       PluginItem pluginSel = (PluginItem) pluginCombo.getSelectedItem();
 
       rootNode.removeAllChildren();
       Map<String, DefaultMutableTreeNode> groupCache = new HashMap<>();
       int leafCount = 0;
       for (Row r : allRows) {
-        if (!matches(r, q, pluginSel)) continue;
+        if (!matches(r, q, classQ, pluginSel)) continue;
         DefaultMutableTreeNode parent;
         if (groupMode == GroupMode.PLUGIN) {
           parent = groupCache.computeIfAbsent(r.pluginBucket(), key -> {
@@ -371,13 +382,16 @@ public final class IntentionListPanel {
       return parent;
     }
 
-    private boolean matches(Row r, String needle, PluginItem plugin) {
+    private boolean matches(Row r, String needle, String classNeedle, PluginItem plugin) {
       if (!needle.isEmpty()) {
         boolean ok = r.family.toLowerCase(Locale.ROOT).contains(needle)
           || r.implClass.toLowerCase(Locale.ROOT).contains(needle)
           || r.groupPathJoined().toLowerCase(Locale.ROOT).contains(needle)
           || r.pluginName.toLowerCase(Locale.ROOT).contains(needle);
         if (!ok) return false;
+      }
+      if (!classNeedle.isEmpty()) {
+        if (!r.implClass.toLowerCase(Locale.ROOT).contains(classNeedle)) return false;
       }
       if (plugin != null) {
         if (plugin.pluginName == null) {

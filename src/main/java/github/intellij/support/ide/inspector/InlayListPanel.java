@@ -1,6 +1,7 @@
 package github.intellij.support.ide.inspector;
 
 import com.intellij.codeInsight.hints.InlayGroup;
+import com.intellij.codeInsight.hints.declarative.InlayHintsProviderExtensionBean;
 import com.intellij.codeInsight.hints.settings.InlayProviderSettingsModel;
 import com.intellij.codeInsight.hints.settings.InlaySettingsProvider;
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
@@ -91,7 +92,7 @@ public final class InlayListPanel {
     final String pluginName;
     final String description;
 
-    Row(InlayProviderSettingsModel m) {
+    Row(InlayProviderSettingsModel m, Map<String, String> declarativeImplByProviderId) {
       this.name = nullSafe(m.getName());
       this.id = nullSafe(m.getId());
       String gt = "(Other)";
@@ -106,7 +107,7 @@ public final class InlayListPanel {
       this.languageId = lang == null ? "" : lang.getID();
       this.languageDisplay = lang == null ? "" : nullSafeOr(lang.getDisplayName(), lang.getID());
 
-      this.implClass = m.getClass().getName();
+      this.implClass = resolveImplClass(m, declarativeImplByProviderId);
 
       String pid = "";
       String pname = "";
@@ -143,6 +144,27 @@ public final class InlayListPanel {
     private static String nullSafeOr(String s, String fallback) {
       return (s == null || s.isEmpty()) ? (fallback == null ? "" : fallback) : s;
     }
+
+    /**
+     * Resolve the real {@link com.intellij.codeInsight.hints.declarative.InlayHintsProvider}
+     * impl class for declarative models. {@code DeclarativeHintsProviderSettingsModel} is a
+     * generic wrapper around an {@code InlayHintsProviderExtensionBean}; calling
+     * {@code m.getClass().getName()} for those would always return the wrapper class.
+     *
+     * Resolution: look up the model's id in the EP-derived
+     * {@code providerId -> implementationClass} map (built once per load by reading
+     * {@code InlayHintsProviderExtensionBean.EP.extensionList} — no provider instantiation,
+     * no reflection). Falls back to {@code m.getClass().getName()} for non-declarative
+     * models (code vision, v1 inlay hints, etc.) whose own class already is the impl.
+     */
+    private static String resolveImplClass(InlayProviderSettingsModel m, Map<String, String> declarativeImplByProviderId) {
+      String id = m.getId();
+      if (id != null && !id.isEmpty()) {
+        String impl = declarativeImplByProviderId.get(id);
+        if (impl != null && !impl.isEmpty()) return impl;
+      }
+      return m.getClass().getName();
+    }
   }
 
   private static final class LangItem {
@@ -165,6 +187,7 @@ public final class InlayListPanel {
     private final ComboBox<LangItem> languageCombo = new ComboBox<>();
     private final ComboBox<PluginItem> pluginCombo = new ComboBox<>();
     private final SearchTextField filterField = new SearchTextField();
+    private final SearchTextField classFilterField = new SearchTextField();
     private final DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("Inlay providers");
     private final DefaultTreeModel treeModel = new DefaultTreeModel(rootNode);
     private final Tree tree = new Tree(treeModel);
@@ -203,6 +226,12 @@ public final class InlayListPanel {
       filterField.setPreferredSize(new Dimension(220, filterField.getPreferredSize().height));
       row1.add(filterField);
       row1.add(Box.createHorizontalStrut(12));
+      row1.add(new JBLabel("Class:"));
+      row1.add(Box.createHorizontalStrut(6));
+      classFilterField.setPreferredSize(new Dimension(220, classFilterField.getPreferredSize().height));
+      classFilterField.getTextEditor().getEmptyText().setText("Filter by class name");
+      row1.add(classFilterField);
+      row1.add(Box.createHorizontalStrut(12));
       row1.add(status);
 
       JPanel row2 = new JPanel();
@@ -235,6 +264,9 @@ public final class InlayListPanel {
       this.root = main;
 
       filterField.addDocumentListener(new DocumentAdapter() {
+        @Override protected void textChanged(@NotNull DocumentEvent e) { rebuildTree(); }
+      });
+      classFilterField.addDocumentListener(new DocumentAdapter() {
         @Override protected void textChanged(@NotNull DocumentEvent e) { rebuildTree(); }
       });
       languageCombo.addActionListener(e -> { if (!suppressFilterEvents) rebuildTree(); });
@@ -328,11 +360,33 @@ public final class InlayListPanel {
       return toolbar.getComponent();
     }
 
+    /**
+     * Snapshot the declarative inlay-hint provider EP into a
+     * {@code providerId -> implementationClass} map. Reads the XML-declared FQN directly
+     * from each {@link InlayHintsProviderExtensionBean}; no provider class is loaded.
+     */
+    private static Map<String, String> buildDeclarativeImplMap() {
+      Map<String, String> result = new HashMap<>();
+      try {
+        List<InlayHintsProviderExtensionBean> beans =
+          InlayHintsProviderExtensionBean.Companion.getEP().getExtensionList();
+        for (InlayHintsProviderExtensionBean bean : beans) {
+          String pid = bean.getProviderId();
+          String impl = bean.getImplementationClass();
+          if (pid != null && !pid.isEmpty() && impl != null && !impl.isEmpty()) {
+            result.putIfAbsent(pid, impl);
+          }
+        }
+      } catch (Throwable ignored) {}
+      return result;
+    }
+
     private void loadRows() {
       final long token = ++loadToken;
       status.setText("Loading…");
       ApplicationManager.getApplication().executeOnPooledThread(() -> {
         List<Row> rows = new ArrayList<>();
+        Map<String, String> declarativeImplByProviderId = buildDeclarativeImplMap();
         try {
           for (InlaySettingsProvider provider : InlaySettingsProvider.EP.INSTANCE.getExtensions()) {
             Collection<Language> langs;
@@ -343,7 +397,7 @@ public final class InlayListPanel {
               try {
                 List<InlayProviderSettingsModel> models = provider.createModels(project, lang);
                 for (InlayProviderSettingsModel m : models) {
-                  try { rows.add(new Row(m)); } catch (Throwable ignored) {}
+                  try { rows.add(new Row(m, declarativeImplByProviderId)); } catch (Throwable ignored) {}
                 }
               } catch (Throwable ignored) {}
             }
@@ -423,6 +477,7 @@ public final class InlayListPanel {
 
     private void rebuildTree() {
       String q = filterField.getText().trim().toLowerCase(Locale.ROOT);
+      String classQ = classFilterField.getText().trim().toLowerCase(Locale.ROOT);
       LangItem langSel = (LangItem) languageCombo.getSelectedItem();
       PluginItem pluginSel = (PluginItem) pluginCombo.getSelectedItem();
       Set<String> currentFileLangs = limitToCurrentFile ? currentFileLanguageIds() : null;
@@ -431,7 +486,7 @@ public final class InlayListPanel {
       Map<String, DefaultMutableTreeNode> groupCache = new HashMap<>();
       int leafCount = 0;
       for (Row r : allRows) {
-        if (!matches(r, q, langSel, pluginSel, currentFileLangs)) continue;
+        if (!matches(r, q, classQ, langSel, pluginSel, currentFileLangs)) continue;
         DefaultMutableTreeNode parent;
         String bucket = switch (groupMode) {
           case PLUGIN -> r.pluginBucket();
@@ -463,7 +518,7 @@ public final class InlayListPanel {
       status.setText(leafCount + " / " + allRows.size() + " providers" + filterNote);
     }
 
-    private boolean matches(Row r, String needle, LangItem lang, PluginItem plugin, Set<String> currentFileLangs) {
+    private boolean matches(Row r, String needle, String classNeedle, LangItem lang, PluginItem plugin, Set<String> currentFileLangs) {
       if (!needle.isEmpty()) {
         boolean ok = r.name.toLowerCase(Locale.ROOT).contains(needle)
           || r.id.toLowerCase(Locale.ROOT).contains(needle)
@@ -472,6 +527,9 @@ public final class InlayListPanel {
           || r.languageDisplay.toLowerCase(Locale.ROOT).contains(needle)
           || r.pluginName.toLowerCase(Locale.ROOT).contains(needle);
         if (!ok) return false;
+      }
+      if (!classNeedle.isEmpty()) {
+        if (!r.implClass.toLowerCase(Locale.ROOT).contains(classNeedle)) return false;
       }
       if (lang != null) {
         if (lang.languageId == null) {
