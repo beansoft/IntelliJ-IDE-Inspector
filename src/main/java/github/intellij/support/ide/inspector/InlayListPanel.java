@@ -1,6 +1,8 @@
 package github.intellij.support.ide.inspector;
 
+import com.intellij.codeInsight.codeVision.CodeVisionProvider;
 import com.intellij.codeInsight.hints.InlayGroup;
+import com.intellij.codeInsight.hints.codeVision.DaemonBoundCodeVisionProvider;
 import com.intellij.codeInsight.hints.declarative.InlayHintsProviderExtensionBean;
 import com.intellij.codeInsight.hints.settings.InlayProviderSettingsModel;
 import com.intellij.codeInsight.hints.settings.InlaySettingsProvider;
@@ -366,6 +368,20 @@ public final class InlayListPanel {
      * from each {@link InlayHintsProviderExtensionBean}; no provider class is loaded.
      */
     private static Map<String, String> buildDeclarativeImplMap() {
+
+      DaemonBoundCodeVisionProvider.Companion.getExtensionPoint().getExtensionList().forEach(
+              i -> {
+                System.out.println("DaemonBoundCodeVisionProvider " + i.getClass());
+              }
+      );
+
+      CodeVisionProvider.Companion.getProvidersExtensionPoint().getExtensionList().forEach(
+              i -> {
+                System.out.println("CodeVisionProvider " + i.getClass());
+              }
+      );
+
+
       Map<String, String> result = new HashMap<>();
       try {
         List<InlayHintsProviderExtensionBean> beans =

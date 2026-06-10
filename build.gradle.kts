@@ -107,6 +107,12 @@ intellijPlatform {
         channels = providers.gradleProperty("pluginVersion").map { listOf(it.substringAfter('-', "").substringBefore('.').ifEmpty { "default" }) }
     }
 
+    pluginVerification {
+        ides {
+            create(providers.gradleProperty("platformType").get(), providers.gradleProperty("platformVersion").get())
+        }
+    }
+
 }
 
 // Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
