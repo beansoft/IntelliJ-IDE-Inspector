@@ -35,7 +35,7 @@ class LensRenderer(private val info: HighlightInfo) : HintRenderer(null) {
 
 		val inspectionToolIdString = info.inspectionToolId
 
-		println("inspectionToolId = " + inspectionToolIdString)
+//		println("inspectionToolId = " + inspectionToolIdString)
 
 		if(inspectionToolIdString != null) {
 			val toolWrapper: InspectionToolWrapper<*, *>? =  InspectionProfileManager.getInstance().currentProfile

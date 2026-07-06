@@ -114,6 +114,11 @@ public class IdeInspectorToolWindowFactory implements ToolWindowFactory, DumbAwa
         inlays.setCloseable(false);
         toolWindow.getContentManager().addContent(inlays);
 
+        Content suppressWarnings = ContentFactory.getInstance()
+                .createContent(SuppressWarningsListPanel.create(project), "SuppressWarnings", false);
+        suppressWarnings.setCloseable(false);
+        toolWindow.getContentManager().addContent(suppressWarnings);
+
         KeymapPanel keymapPanel = new KeymapPanel();
         JComponent keymapComponent = keymapPanel.createComponent();
         keymapPanel.reset();
