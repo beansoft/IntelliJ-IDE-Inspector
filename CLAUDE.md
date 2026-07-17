@@ -36,7 +36,7 @@ The plugin's `<description>` in `plugin.xml` is overwritten at build time from t
 
 1. **Inline inspection lenses** — rendered next to lines with `HighlightInfo`s, clickable to dump the inspection + quick-fix class names.
 2. **Help menu tooling** — `Dump Editor Intentions...` and (when `com.intellij.java` is present) `Show Git Log For Classes...` / `ShowExternalGitLogAction` for jumping straight to inspection sources in an `intellij-community` checkout.
-3. **Inspection git history popup** — `InspectionGitHistoryPopup` + `GitHistoryReader` + `IdeaSourcePathResolver` surface commit history for the inspection class against a configured IntelliJ Community checkout (path stored in `.profileconfig.json` / settings). See `docs/inspection-git-history.md` and `docs/external-git-log.md`.
+3. **Inspection git history popup** — `InspectionGitHistoryPopup` + `GitHistoryReader` + `IdeaSourcePathResolver` surface commit history for the inspection class against a configured IntelliJ Community checkout (path stored in `.profileconfig.json` / settings). See `dev_doc/inspection-git-history.md` and `dev_doc/external-git-log.md`.
 4. **MCP toolset** — `mcp/IdeaInspectorMcpToolset.kt` + `IdeaInspectorMcpClient.kt` expose IDE inspector actions to the bundled `com.intellij.mcpServer` (optional dep, wired through `plugin_mcp.xml`). Includes git operations and project-path resolution.
 5. **Tool window extras** — `IDE Properties` tool window also hosts the **Special Paths** browser (`diagnostic/specialPaths/*`).
 
