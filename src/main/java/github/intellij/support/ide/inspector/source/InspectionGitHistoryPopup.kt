@@ -17,7 +17,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vcs.changes.ui.ChangesViewContentManager
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.vcs.log.VcsLogFileHistoryProvider
-import com.intellij.vcs.log.visible.filters.VcsLogFilterObject
 import com.intellij.vcsUtil.VcsUtil
 import git4idea.GitUtil
 import git4idea.log.showExternalGitLogInToolwindow
@@ -140,18 +139,18 @@ object InspectionGitHistoryPopup {
                 val roots = listOf(rootVf)
                 val tabTitle = "History: " + fqn.substringAfterLast('.')
                 val tabDescription = "$fqn\n${vf.path}"
-                val filters = VcsLogFilterObject.collection(
-                    VcsLogFilterObject.fromVirtualFiles(setOf(vf))
-                )
+//                val filters = VcsLogFilterObject.collection(
+//                    VcsLogFilterObject.fromVirtualFiles(setOf(vf))
+//                )
                 val logId = "EXTERNAL " + roots.joinToString(java.io.File.pathSeparator) { it.path }
                 showExternalGitLogInToolwindow(
                     project, toolWindow,
-                    { createLogUi(logId, filters) },
                     roots, tabTitle, tabDescription,
                 )
             }
         }.queue()
     }
+
 
     /**
      * Note: This class is not used so far.

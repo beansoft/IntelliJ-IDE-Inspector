@@ -15,7 +15,7 @@ version = providers.gradleProperty("pluginVersion").get()
 
 // Set the JVM language level used to build the project.
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
     sourceSets {
         main {
             kotlin.srcDirs("src/main/kotlin", "src/main/java")

@@ -22,6 +22,7 @@ import com.intellij.openapi.keymap.Keymap;
 import com.intellij.openapi.keymap.KeymapUtil;
 import com.intellij.openapi.keymap.ex.KeymapManagerEx;
 import com.intellij.openapi.keymap.impl.KeymapImpl;
+import com.intellij.openapi.keymap.impl.ui.ActionTreeGroupUtil;
 import com.intellij.openapi.keymap.impl.ui.ActionsTreeUtil;
 import com.intellij.openapi.keymap.impl.ui.Group;
 import com.intellij.openapi.keymap.impl.ui.Hyperlink;
@@ -246,11 +247,11 @@ public final class ActionsTree {
     Project project = CommonDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext(myComponent));
     Condition<? super AnAction>
       condFilter = combineWithBaseFilter(ActionsTreeUtil.isActionFiltered(actionManager, keymap, shortcut, filter, true));
-    Group mainGroup = ActionsTreeUtil.createMainGroup(project, keymap, allQuickLists, filter, true, condFilter);
+    Group mainGroup = ActionTreeGroupUtil.createMainGroup(project, keymap, allQuickLists, filter, true, condFilter);
 
     if ((filter != null && filter.length() > 0 || shortcut != null) && mainGroup.initIds().isEmpty()) {
       condFilter = combineWithBaseFilter(ActionsTreeUtil.isActionFiltered(actionManager, keymap, shortcut, filter, false));
-      mainGroup = ActionsTreeUtil.createMainGroup(project, keymap, allQuickLists, filter, false, condFilter);
+      mainGroup = ActionTreeGroupUtil.createMainGroup(project, keymap, allQuickLists, filter, false, condFilter);
     }
 
     myRoot = ActionsTreeUtil.createNode(mainGroup);
