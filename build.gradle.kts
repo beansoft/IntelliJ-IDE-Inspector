@@ -129,4 +129,9 @@ tasks {
     publishPlugin {
         dependsOn(patchChangelog)
     }
+
+    runIde {
+        jvmArgs = listOf("-Xms512m", "-XX:+AllowEnhancedClassRedefinition", "-Xmx4096m", "-XX:ReservedCodeCacheSize=512m",
+            "-XX:+UseG1GC", "-Didea.max.intellisense.filesize=8196")
+    }
 }

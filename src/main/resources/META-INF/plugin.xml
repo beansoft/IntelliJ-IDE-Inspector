@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>com.intellij.support.ide.inspector</id>
   <name>IDE Inspector</name>
-  <vendor url="https://jetbrains.com" email="changjiong.liu@jetbrains.com">JetBrains</vendor>
+  <vendor url="https://github.com/beansoft" email="beansoft@126.com">BeanSoft</vendor>
   
   <description><![CDATA[
   WIP.<br>
@@ -53,6 +53,14 @@
 
     <toolWindow id="IDE Inspector" anchor="bottom" icon="/newui/project.svg" canCloseContents="true"
                 factoryClass="github.intellij.support.ide.inspector.IdeInspectorToolWindowFactory" secondary="false"/>
+
+    <fileType name="IDEA Log"
+              implementationClass="github.intellij.support.ide.inspector.logviewer.IdeaLogFileType"
+              fieldName="INSTANCE"
+              language="TEXT"
+              patterns="idea.log;idea.log.*;idea-*.log"/>
+
+    <fileEditorProvider implementation="github.intellij.support.ide.inspector.logviewer.IdeaLogFileEditorProvider"/>
   </extensions>
   
   <applicationListeners>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectCodeNotesSettings">
+    <option name="notesDbPath" value="$PROJECT_DIR$/.idea/notes.db" />
+    <option name="enableProjectCodeNotes" value="true" />
+    <option name="recentHistoryNoteIds">
+      <list>
+        <option value="0fbcf007-efcb-41ff-a7b3-b2731dde36ff" />
+        <option value="95504a09-2655-4cf7-98ff-bd2d0275533f" />
+        <option value="d9458e7f-9114-41ad-85d1-5e12f185497b" />
+        <option value="c9d4e35d-0a8d-4449-a221-4d07009c124d" />
+      </list>
+    </option>
+    <option name="historyCurrentIndex" value="0" />
+    <option name="markdownPreviewLanguageProtocols">
+      <list>
+        <option value="kt" />
+        <option value="java" />
+      </list>
+    </option>
+    <option name="markdownOutlineVisible" value="true" />
+  </component>
+</project>
